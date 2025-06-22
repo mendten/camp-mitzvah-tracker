@@ -13,6 +13,7 @@ import CamperEditDialog from '@/components/CamperEditDialog';
 import CamperDetailsModal from '@/components/CamperDetailsModal';
 import CamperCalendar from '@/components/CamperCalendar';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
+import MissionRequirementDialog from '@/components/MissionRequirementDialog';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const AdminDashboard = () => {
   const [editingCamper, setEditingCamper] = useState<any>(null);
   const [showCamperDetails, setShowCamperDetails] = useState(false);
   const [viewingCamper, setViewingCamper] = useState<any>(null);
+  const [showMissionRequirements, setShowMissionRequirements] = useState(false);
   const hebrewDate = getCurrentHebrewDate();
 
   useEffect(() => {
@@ -151,6 +153,13 @@ const AdminDashboard = () => {
     toast({
       title: "Camper Saved",
       description: `${camper.name} has been updated successfully`,
+    });
+  };
+
+  const handleSaveMissionRequirements = (requirements: { dailyRequired: number; weeklyRequired: number }) => {
+    toast({
+      title: "Mission Requirements Updated",
+      description: `Daily: ${requirements.dailyRequired}, Weekly: ${requirements.weeklyRequired}`,
     });
   };
 
@@ -358,10 +367,20 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   <span>Mission Management</span>
-                  <Button size="sm" onClick={handleCreateMission}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Mission
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setShowMissionRequirements(true)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Requirements
+                    </Button>
+                    <Button size="sm" onClick={handleCreateMission}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Mission
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -543,6 +562,12 @@ const AdminDashboard = () => {
         onClose={() => setShowCamperDetails(false)}
         camper={viewingCamper}
         bunkName={viewingCamper?.bunk || ''}
+      />
+
+      <MissionRequirementDialog
+        isOpen={showMissionRequirements}
+        onClose={() => setShowMissionRequirements(false)}
+        onSave={handleSaveMissionRequirements}
       />
 
       {showStatDetails && (

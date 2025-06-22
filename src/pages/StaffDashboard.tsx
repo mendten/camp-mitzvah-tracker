@@ -10,6 +10,8 @@ import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import StaffLogin from '@/components/StaffLogin';
 import BulkCompleteDialog from '@/components/BulkCompleteDialog';
 import CamperDetailsModal from '@/components/CamperDetailsModal';
+import PendingApprovalsCard from '@/components/PendingApprovalsCard';
+import CamperCalendar from '@/components/CamperCalendar';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
 
 const StaffDashboard = () => {
@@ -246,9 +248,10 @@ const StaffDashboard = () => {
         </div>
 
         <Tabs defaultValue="campers" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="campers">Camper Management</TabsTrigger>
-            <TabsTrigger value="progress">Progress Tracking</TabsTrigger>
+            <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -340,42 +343,21 @@ const StaffDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="progress">
+          <TabsContent value="approvals">
+            <PendingApprovalsCard bunkCampers={bunkData.campers} />
+          </TabsContent>
+
+          <TabsContent value="calendar">
             <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
               <CardHeader>
-                <CardTitle>Individual Progress Tracking</CardTitle>
+                <CardTitle>Staff Calendar View</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {bunkData.campers.map((camper: any) => {
-                    const progress = localStorage.getItem(`camper_${camper.id}_missions`);
-                    const completedMissionIds = progress ? new Set(JSON.parse(progress)) : new Set();
-
-                    return (
-                      <Card key={camper.id} className="border">
-                        <CardContent className="p-4">
-                          <h4 className="font-semibold text-lg mb-3">{camper.name}</h4>
-                          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {activeMissions.map(mission => (
-                              <div key={mission.id} className="flex items-center justify-between p-2 border rounded">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-lg">{mission.icon}</span>
-                                  <span className="text-sm">{mission.title}</span>
-                                </div>
-                                <Checkbox
-                                  checked={completedMissionIds.has(mission.id)}
-                                  onCheckedChange={(checked) => 
-                                    editCamperProgress(camper.id, mission.id, checked as boolean)
-                                  }
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                <CamperCalendar 
+                  completedMissions={new Set()} 
+                  missions={activeMissions} 
+                  camperId="staff" 
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -403,9 +385,9 @@ const StaffDashboard = () => {
                         <span className="font-semibold">
                           {bunkData.campers.reduce((max: any, camper: any) => {
                             const progress = localStorage.getItem(`camper_${camper.id}_missions`);
-                            const completed = progress ? JSON.parse(progress).length : 0;
+                            const completed = progress ? JSON.parse(progress) : 0;
                             const maxProgress = localStorage.getItem(`camper_${max.id}_missions`);
-                            const maxCompleted = maxProgress ? JSON.parse(maxProgress).length : 0;
+                            const maxCompleted = maxProgress ? JSON.parse(maxProgress) : 0;
                             return completed > maxCompleted ? camper : max;
                           }).name}
                         </span>

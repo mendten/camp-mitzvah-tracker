@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,7 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
         bunk: camper.bunk || '',
         progress: camper.progress || 0,
         missions: camper.missions || 0,
-        code: camper.code || camper.id || ''
+        code: camper.code || camper.id || '' // Use code if available, fallback to id
       });
     }
   }, [camper]);
@@ -55,10 +54,19 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
       return;
     }
 
+    if (!editedCamper.code.trim()) {
+      toast({
+        title: "Invalid Camper",
+        description: "Camper code is required for identification",
+        variant: "destructive"
+      });
+      return;
+    }
+
     onSave(editedCamper);
     toast({
       title: "Camper Updated",
-      description: `${editedCamper.name} has been updated successfully`,
+      description: `${editedCamper.name} (Code: ${editedCamper.code}) has been updated successfully`,
     });
     onClose();
   };
@@ -71,7 +79,7 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Edit Camper</DialogTitle>
           <DialogDescription>
-            Modify the camper details below
+            Modify the camper details below. The code is used for camper identification and login.
           </DialogDescription>
         </DialogHeader>
 
@@ -87,13 +95,14 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="code">Camper Code</Label>
+              <Label htmlFor="code">Camper Code (ID)</Label>
               <Input
                 id="code"
                 value={editedCamper.code}
                 onChange={(e) => setEditedCamper({ ...editedCamper, code: e.target.value })}
-                placeholder="Enter camper code"
+                placeholder="Enter unique camper code"
               />
+              <p className="text-xs text-gray-500">This code is used for camper login and identification</p>
             </div>
           </div>
 
@@ -147,7 +156,7 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
             <div className="space-y-2">
               <p><strong>Name:</strong> {editedCamper.name || 'Camper Name'}</p>
               <p><strong>Bunk:</strong> {editedCamper.bunk || 'Not assigned'}</p>
-              <p><strong>Code:</strong> {editedCamper.code || 'No code'}</p>
+              <p><strong>Login Code:</strong> {editedCamper.code || 'No code'}</p>
               <p><strong>Progress:</strong> {editedCamper.progress}%</p>
               <p><strong>Missions:</strong> {editedCamper.missions}</p>
             </div>
