@@ -10,6 +10,8 @@ import AdminLogin from '@/components/AdminLogin';
 import BunkManagementDialog from '@/components/BunkManagementDialog';
 import MissionEditDialog from '@/components/MissionEditDialog';
 import CamperEditDialog from '@/components/CamperEditDialog';
+import CamperDetailsModal from '@/components/CamperDetailsModal';
+import CamperCalendar from '@/components/CamperCalendar';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
 
 const AdminDashboard = () => {
@@ -24,6 +26,8 @@ const AdminDashboard = () => {
   const [showStatDetails, setShowStatDetails] = useState<{ type: string; data: any } | null>(null);
   const [showCamperEdit, setShowCamperEdit] = useState(false);
   const [editingCamper, setEditingCamper] = useState<any>(null);
+  const [showCamperDetails, setShowCamperDetails] = useState(false);
+  const [viewingCamper, setViewingCamper] = useState<any>(null);
   const hebrewDate = getCurrentHebrewDate();
 
   useEffect(() => {
@@ -135,6 +139,11 @@ const AdminDashboard = () => {
   const handleEditCamper = (camper: any) => {
     setEditingCamper(camper);
     setShowCamperEdit(true);
+  };
+
+  const handleViewCamper = (camper: any) => {
+    setViewingCamper(camper);
+    setShowCamperDetails(true);
   };
 
   const handleSaveCamper = (camper: any) => {
@@ -287,10 +296,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="bunks" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="bunks">Bunks</TabsTrigger>
             <TabsTrigger value="missions">Missions</TabsTrigger>
             <TabsTrigger value="campers">Campers</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -426,7 +436,7 @@ const AdminDashboard = () => {
                               <Edit className="h-3 w-3 mr-1" />
                               Edit
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => toast({ title: "View Camper", description: `Viewing ${camper.name}'s profile` })}>
+                            <Button size="sm" variant="outline" onClick={() => handleViewCamper(camper)}>
                               <Eye className="h-3 w-3" />
                             </Button>
                           </div>
@@ -435,6 +445,21 @@ const AdminDashboard = () => {
                     </Card>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+              <CardHeader>
+                <CardTitle>Admin Calendar View</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CamperCalendar 
+                  completedMissions={new Set()} 
+                  missions={missions.filter(m => m.isActive)} 
+                  camperId="admin" 
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -468,7 +493,7 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span>Most Popular Mission</span>
-                        <span className="font-semibold">Shacharit</span>
+                        <span className="font-semibold">Morning Prayer</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Completion Rate</span>
@@ -511,6 +536,13 @@ const AdminDashboard = () => {
         onClose={() => setShowCamperEdit(false)}
         camper={editingCamper}
         onSave={handleSaveCamper}
+      />
+
+      <CamperDetailsModal
+        isOpen={showCamperDetails}
+        onClose={() => setShowCamperDetails(false)}
+        camper={viewingCamper}
+        bunkName={viewingCamper?.bunk || ''}
       />
 
       {showStatDetails && (

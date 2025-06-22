@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,7 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
   camper,
   onSave
 }) => {
-  const [editedCamper, setEditedCamper] = useState(camper || {
+  const [editedCamper, setEditedCamper] = useState({
     id: '',
     name: '',
     bunk: '',
@@ -30,6 +30,20 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
     code: ''
   });
   const { toast } = useToast();
+
+  // Update form when camper prop changes
+  useEffect(() => {
+    if (camper) {
+      setEditedCamper({
+        id: camper.id || '',
+        name: camper.name || '',
+        bunk: camper.bunk || '',
+        progress: camper.progress || 0,
+        missions: camper.missions || 0,
+        code: camper.code || camper.id || ''
+      });
+    }
+  }, [camper]);
 
   const handleSave = () => {
     if (!editedCamper.name.trim()) {
@@ -76,7 +90,7 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
               <Label htmlFor="code">Camper Code</Label>
               <Input
                 id="code"
-                value={editedCamper.code || ''}
+                value={editedCamper.code}
                 onChange={(e) => setEditedCamper({ ...editedCamper, code: e.target.value })}
                 placeholder="Enter camper code"
               />
@@ -102,17 +116,30 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="progress">Progress (%)</Label>
-            <Input
-              id="progress"
-              type="number"
-              min="0"
-              max="100"
-              value={editedCamper.progress}
-              onChange={(e) => setEditedCamper({ ...editedCamper, progress: parseInt(e.target.value) || 0 })}
-              placeholder="Enter progress percentage"
-            />
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="progress">Progress (%)</Label>
+              <Input
+                id="progress"
+                type="number"
+                min="0"
+                max="100"
+                value={editedCamper.progress}
+                onChange={(e) => setEditedCamper({ ...editedCamper, progress: parseInt(e.target.value) || 0 })}
+                placeholder="Enter progress percentage"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="missions">Completed Missions</Label>
+              <Input
+                id="missions"
+                type="number"
+                min="0"
+                value={editedCamper.missions}
+                onChange={(e) => setEditedCamper({ ...editedCamper, missions: parseInt(e.target.value) || 0 })}
+                placeholder="Enter completed missions"
+              />
+            </div>
           </div>
 
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -122,6 +149,7 @@ const CamperEditDialog: React.FC<CamperEditDialogProps> = ({
               <p><strong>Bunk:</strong> {editedCamper.bunk || 'Not assigned'}</p>
               <p><strong>Code:</strong> {editedCamper.code || 'No code'}</p>
               <p><strong>Progress:</strong> {editedCamper.progress}%</p>
+              <p><strong>Missions:</strong> {editedCamper.missions}</p>
             </div>
           </div>
         </div>
