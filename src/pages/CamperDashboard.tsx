@@ -4,74 +4,123 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Star, Award, Calendar } from 'lucide-react';
+import { LogOut, Star, Award, Calendar, Clock, Home } from 'lucide-react';
 import MissionCard from '@/components/MissionCard';
 import BunkSelector from '@/components/BunkSelector';
+import CamperSelector from '@/components/CamperSelector';
 import { useToast } from '@/hooks/use-toast';
+import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
+import { SESSION_CONFIG, DEFAULT_MISSIONS, CAMP_DATA, REQUIRED_MISSIONS_COUNT } from '@/data/campData';
 
 const CamperDashboard = () => {
   const [selectedBunk, setSelectedBunk] = useState<string>('');
-  const [missions, setMissions] = useState([
-    { id: 1, title: 'Morning Tefillah', type: 'prayer', completed: false, icon: '🕯️' },
-    { id: 2, title: 'Torah Study', type: 'learning', completed: false, icon: '📜' },
-    { id: 3, title: 'Acts of Kindness', type: 'mitzvah', completed: false, icon: '❤️' },
-    { id: 4, title: 'Camp Activity', type: 'activity', completed: false, icon: '🏃' },
-    { id: 5, title: 'Evening Reflection', type: 'reflection', completed: false, icon: '⭐' },
-    { id: 6, title: 'Hebrew Practice', type: 'learning', completed: false, icon: '✍️' },
-    { id: 7, title: 'Help a Friend', type: 'mitzvah', completed: false, icon: '🤝' },
-    { id: 8, title: 'Sports & Games', type: 'activity', completed: false, icon: '⚽' }
-  ]);
+  const [selectedCamper, setSelectedCamper] = useState<string>('');
+  const [currentStep, setCurrentStep] = useState<'bunk' | 'camper' | 'dashboard'>('bunk');
+  const [missions, setMissions] = useState(DEFAULT_MISSIONS.filter(m => m.isActive).map(m => ({
+    id: parseInt(m.id.split('_')[1] || '1'),
+    title: m.title,
+    type: m.type,
+    completed: false,
+    icon: m.icon,
+    isMandatory: m.isMandatory
+  })));
 
-  const [streakCount, setStreakCount] = useState(3);
-  const [totalPoints, setTotalPoints] = useState(42);
+  const [streakCount, setStreakCount] = useState(1);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [hasSubmittedToday, setHasSubmittedToday] = useState(false);
+  const [canSubmitToday, setCanSubmitToday] = useState(true);
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const hebrewDate = getCurrentHebrewDate();
+  const sessionInfo = getSessionInfo(SESSION_CONFIG);
+
+  // Check if it's past midnight (12am Florida time)
+  useEffect(() => {
+    const now = new Date();
+    const floridaTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      hour12: false
+    });
+    const currentHour = parseInt(floridaTime.format(now));
+    
+    // For simulation, allow submissions during testing hours
+    setCanSubmitToday(true);
+  }, []);
 
   // Load saved progress from localStorage
   useEffect(() => {
-    const savedProgress = localStorage.getItem(`camper-progress-${selectedBunk}`);
-    if (savedProgress) {
-      const { missions: savedMissions, streak, points } = JSON.parse(savedProgress);
-      setMissions(savedMissions);
-      setStreakCount(streak || 3);
-      setTotalPoints(points || 42);
+    if (selectedCamper && selectedBunk) {
+      const savedProgress = localStorage.getItem(`camper-progress-${selectedCamper}`);
+      if (savedProgress) {
+        const { missions: savedMissions, streak, points, submitted } = JSON.parse(savedProgress);
+        setMissions(savedMissions || missions);
+        setStreakCount(streak || 1);
+        setTotalPoints(points || 0);
+        setHasSubmittedToday(submitted || false);
+      }
+      setCurrentStep('dashboard');
     }
-  }, [selectedBunk]);
+  }, [selectedCamper, selectedBunk]);
 
   // Save progress to localStorage whenever missions change
   useEffect(() => {
-    if (selectedBunk) {
-      localStorage.setItem(`camper-progress-${selectedBunk}`, JSON.stringify({
+    if (selectedCamper) {
+      const progressData = {
         missions,
         streak: streakCount,
-        points: totalPoints
-      }));
+        points: totalPoints,
+        submitted: hasSubmittedToday,
+        lastSubmission: Date.now()
+      };
+      localStorage.setItem(`camper-progress-${selectedCamper}`, JSON.stringify(progressData));
+      localStorage.setItem('currentCamper', selectedCamper);
+      localStorage.setItem('currentBunk', selectedBunk);
     }
-  }, [missions, streakCount, totalPoints, selectedBunk]);
+  }, [missions, streakCount, totalPoints, hasSubmittedToday, selectedCamper, selectedBunk]);
 
   const completedCount = missions.filter(m => m.completed).length;
   const progressPercentage = (completedCount / missions.length) * 100;
+  const mandatoryMissions = missions.filter(m => m.isMandatory);
+  const completedMandatory = mandatoryMissions.filter(m => m.completed).length;
+  const isQualified = completedCount >= REQUIRED_MISSIONS_COUNT;
 
   const toggleMission = (id: number) => {
+    if (hasSubmittedToday && canSubmitToday) {
+      toast({
+        title: "Already Submitted Today",
+        description: "You can only submit one edit per day. Your submission is pending approval.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!canSubmitToday) {
+      toast({
+        title: "Submission Closed",
+        description: "Daily submissions close at 12am. Contact your staff for changes.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setMissions(prev => prev.map(mission => {
       if (mission.id === id) {
         const newCompleted = !mission.completed;
         if (newCompleted) {
           setTotalPoints(prev => prev + 5);
           
-          // Check for special achievements
           const newCompletedCount = missions.filter(m => m.completed).length + 1;
           if (newCompletedCount === missions.length) {
-            setStreakCount(prev => prev + 1);
             toast({
               title: "🎉 ALL MISSIONS COMPLETE! 🎉",
-              description: `Amazing work! You've completed all ${missions.length} missions today! Streak: ${streakCount + 1} days!`,
+              description: `Amazing work! You've completed all missions today!`,
             });
-          } else if (newCompletedCount === Math.floor(missions.length / 2)) {
+          } else if (newCompletedCount >= REQUIRED_MISSIONS_COUNT && !isQualified) {
             toast({
-              title: "🌟 Halfway There! 🌟",
-              description: `Great progress! You're halfway through today's missions!`,
+              title: "🌟 Qualified for Today! 🌟", 
+              description: `Great job! You've completed ${REQUIRED_MISSIONS_COUNT} missions and qualified!`,
             });
           } else {
             toast({
@@ -81,10 +130,6 @@ const CamperDashboard = () => {
           }
         } else {
           setTotalPoints(prev => Math.max(0, prev - 5));
-          toast({
-            title: "Mission Unchecked",
-            description: `${mission.title} marked as incomplete. -5 points`,
-          });
         }
         return { ...mission, completed: newCompleted };
       }
@@ -92,24 +137,99 @@ const CamperDashboard = () => {
     }));
   };
 
-  if (!selectedBunk) {
-    return <BunkSelector onSelectBunk={setSelectedBunk} />;
+  const handleSubmitDay = () => {
+    if (completedCount < REQUIRED_MISSIONS_COUNT) {
+      toast({
+        title: "Cannot Submit",
+        description: `You need to complete at least ${REQUIRED_MISSIONS_COUNT} missions to submit.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setHasSubmittedToday(true);
+    if (isQualified && completedCount === missions.length) {
+      setStreakCount(prev => prev + 1);
+    }
+    
+    toast({
+      title: "Day Submitted Successfully! 🎉",
+      description: isQualified 
+        ? "Congratulations! You've qualified for today!"
+        : "Submitted! Some requirements may still be pending.",
+    });
+  };
+
+  const handleBunkSelect = (bunkId: string) => {
+    setSelectedBunk(bunkId);
+    setCurrentStep('camper');
+  };
+
+  const handleCamperSelect = (camperId: string) => {
+    setSelectedCamper(camperId);
+    setCurrentStep('dashboard');
+  };
+
+  const handleBack = () => {
+    if (currentStep === 'camper') {
+      setCurrentStep('bunk');
+      setSelectedBunk('');
+    } else if (currentStep === 'dashboard') {
+      setCurrentStep('camper');
+      setSelectedCamper('');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentCamper');
+    localStorage.removeItem('currentBunk');
+    navigate('/');
+  };
+
+  if (currentStep === 'bunk') {
+    return <BunkSelector onSelectBunk={handleBunkSelect} />;
   }
+
+  if (currentStep === 'camper') {
+    return (
+      <CamperSelector 
+        bunkId={selectedBunk}
+        onSelectCamper={handleCamperSelect}
+        onBack={handleBack}
+      />
+    );
+  }
+
+  const camperInfo = CAMP_DATA
+    .find(b => b.id === selectedBunk)
+    ?.campers.find(c => c.id === selectedCamper);
+
+  const bunkInfo = CAMP_DATA.find(b => b.id === selectedBunk);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
       <header className="bg-white shadow-sm border-b p-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Bunk {selectedBunk}</h1>
-            <p className="text-sm text-blue-600">
-              {new Date().toLocaleDateString('he-IL', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                calendar: 'hebrew'
-              })}
-            </p>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="flex items-center space-x-2"
+            >
+              <Home className="h-4 w-4" />
+              <span>Home</span>
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                {camperInfo?.name} - Bunk {bunkInfo?.displayName}
+              </h1>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-blue-600">{hebrewDate.hebrew}</p>
+                <p className="text-xs text-gray-600">{hebrewDate.english}</p>
+                <p className="text-xs text-purple-600">{sessionInfo.english}</p>
+              </div>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
@@ -129,7 +249,7 @@ const CamperDashboard = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/login')}
+              onClick={handleLogout}
               className="flex items-center space-x-2"
             >
               <LogOut className="h-4 w-4" />
@@ -152,12 +272,17 @@ const CamperDashboard = () => {
             </CardHeader>
             <CardContent>
               <Progress value={progressPercentage} className="h-3" />
-              <p className="text-sm text-gray-600 mt-2">
-                {progressPercentage === 100 
-                  ? "🎉 All missions complete! Amazing work!" 
-                  : `${missions.length - completedCount} missions remaining`
-                }
-              </p>
+              <div className="flex justify-between text-sm mt-2">
+                <span className={`${isQualified ? 'text-green-600' : 'text-orange-600'}`}>
+                  {isQualified 
+                    ? `✅ Qualified! (${completedCount}/${REQUIRED_MISSIONS_COUNT} required)` 
+                    : `Need ${REQUIRED_MISSIONS_COUNT - completedCount} more to qualify`
+                  }
+                </span>
+                <span className="text-gray-600">
+                  Mandatory: {completedMandatory}/{mandatoryMissions.length}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
@@ -165,24 +290,39 @@ const CamperDashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Calendar className="h-5 w-5 text-purple-600" />
-                <span>Achievements</span>
+                <span>Submission Status</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Current Streak</span>
-                  <span className="font-semibold text-orange-600">{streakCount} days</span>
+                  <span className="text-sm text-gray-600">Status</span>
+                  <span className={`font-semibold ${hasSubmittedToday ? 'text-green-600' : 'text-orange-600'}`}>
+                    {hasSubmittedToday ? 'Submitted' : 'In Progress'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total Points</span>
-                  <span className="font-semibold text-yellow-600">{totalPoints}</span>
+                  <span className="text-sm text-gray-600">Qualification</span>
+                  <span className={`font-semibold ${isQualified ? 'text-green-600' : 'text-red-600'}`}>
+                    {isQualified ? 'Qualified' : 'Not Qualified'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Rank in Bunk</span>
-                  <span className="font-semibold text-green-600">#3</span>
+                  <span className="text-sm text-gray-600">Time Remaining</span>
+                  <span className="font-semibold text-blue-600 flex items-center space-x-1">
+                    <Clock className="h-3 w-3" />
+                    <span>{canSubmitToday ? 'Open' : 'Closed'}</span>
+                  </span>
                 </div>
               </div>
+              {!hasSubmittedToday && canSubmitToday && completedCount >= REQUIRED_MISSIONS_COUNT && (
+                <Button 
+                  onClick={handleSubmitDay}
+                  className="w-full mt-3 bg-green-600 hover:bg-green-700"
+                >
+                  Submit Today's Missions
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -197,19 +337,25 @@ const CamperDashboard = () => {
           ))}
         </div>
 
-        {progressPercentage === 100 && (
+        {hasSubmittedToday && (
           <Card className="bg-gradient-to-r from-green-100 to-blue-100 border-green-300 animate-scale-in">
             <CardContent className="p-6 text-center">
-              <div className="text-4xl mb-2">🏆</div>
-              <h2 className="text-xl font-bold text-green-800 mb-2">All Missions Complete!</h2>
+              <div className="text-4xl mb-2">
+                {isQualified ? '🏆' : '📝'}
+              </div>
+              <h2 className="text-xl font-bold text-green-800 mb-2">
+                {isQualified ? 'Day Complete & Qualified!' : 'Day Submitted!'}
+              </h2>
               <p className="text-green-700">
-                Congratulations! You've completed all missions for today. 
-                Your dedication is inspiring! Keep up the amazing work tomorrow!
+                {isQualified 
+                  ? 'Excellent work! You\'ve completed your daily requirements and qualified for today!'
+                  : 'Your submission has been recorded. Some requirements may still be pending review.'
+                }
               </p>
               <div className="mt-4 flex justify-center space-x-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">+{missions.length * 5}</div>
-                  <div className="text-sm text-gray-600">Bonus Points</div>
+                  <div className="text-2xl font-bold text-yellow-600">+{completedCount * 5}</div>
+                  <div className="text-sm text-gray-600">Points Earned</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-orange-600">{streakCount}</div>

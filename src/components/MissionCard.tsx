@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, Circle, Star } from 'lucide-react';
+import { CheckCircle2, Circle, Star, AlertTriangle } from 'lucide-react';
 
 interface Mission {
   id: number;
@@ -9,6 +9,7 @@ interface Mission {
   type: string;
   completed: boolean;
   icon: string;
+  isMandatory?: boolean;
 }
 
 interface MissionCardProps {
@@ -46,6 +47,8 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onToggle }) => {
       className={`cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 ${
         mission.completed 
           ? 'border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg shadow-green-200/50' 
+          : mission.isMandatory
+          ? 'border-red-300 bg-gradient-to-br from-red-50 to-pink-50 hover:border-red-400'
           : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
       } group`}
       onClick={onToggle}
@@ -62,7 +65,12 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onToggle }) => {
                 <Star className="h-4 w-4 text-yellow-400 absolute -top-1 -right-1 animate-pulse" />
               </div>
             ) : (
-              <Circle className="h-8 w-8 text-gray-400 group-hover:text-blue-400 transition-colors" />
+              <div className="flex items-center space-x-1">
+                {mission.isMandatory && (
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                )}
+                <Circle className="h-8 w-8 text-gray-400 group-hover:text-blue-400 transition-colors" />
+              </div>
             )}
           </div>
         </div>
@@ -74,13 +82,20 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onToggle }) => {
         </h3>
         
         <div className="flex items-center justify-between">
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            mission.completed 
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-gray-100 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600'
-          } transition-colors capitalize`}>
-            {mission.type}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              mission.completed 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-gray-100 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600'
+            } transition-colors capitalize`}>
+              {mission.type}
+            </span>
+            {mission.isMandatory && (
+              <span className="text-xs px-2 py-1 rounded-full font-medium bg-red-100 text-red-700">
+                Mandatory
+              </span>
+            )}
+          </div>
           
           <p className={`text-sm font-medium ${
             mission.completed ? 'text-green-600' : 'text-gray-600 group-hover:text-blue-600'
