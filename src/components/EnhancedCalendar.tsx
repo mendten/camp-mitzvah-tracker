@@ -1,322 +1,271 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
-import { getCurrentHebrewDate } from '@/utils/hebrewDate';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, ChevronRight, Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
+import { CAMP_DATA } from '@/data/campData';
+import { formatHebrewDate, getHebrewDateForDate } from '@/utils/hebrewDate';
 
 interface EnhancedCalendarProps {
   completedMissions: Set<string>;
   missions: any[];
-  camperId?: string;
+  camperId: string;
   isAdminView?: boolean;
-  bunkCampers?: any[];
 }
-
-const HEBREW_MONTHS = [
-  'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט', 'אדר',
-  'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול'
-];
-
-const HEBREW_DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
 const EnhancedCalendar: React.FC<EnhancedCalendarProps> = ({ 
   completedMissions, 
   missions, 
-  camperId, 
-  isAdminView = false,
-  bunkCampers = []
+  camperId,
+  isAdminView = false 
 }) => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showHebrewCalendar, setShowHebrewCalendar] = useState(false);
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
-  const [showFilters, setShowFilters] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showHebrewDates, setShowHebrewDates] = useState(false);
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
 
-  const getHebrewDate = (date: Date) => {
-    const day = date.getDate();
-    const month = HEBREW_MONTHS[date.getMonth()];
-    const year = 'תשפ"ה';
-    return `${day} ${month} ${year}`;
-  };
+  const today = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
 
-  const getCompletionDataForDate = (date: Date) => {
-    const dateKey = date.toISOString().split('T')[0];
-    const today = new Date().toISOString().split('T')[0];
-    
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+  const firstDayOfWeek = firstDayOfMonth.getDay();
+  const daysInMonth = lastDayOfMonth.getDate();
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const getDayData = (date: Date) => {
     if (isAdminView) {
-      // Admin view: show camp-wide statistics
-      let totalCompletedMissions = 0;
-      let totalCampersWithMissions = 0;
-      
-      bunkCampers.forEach(camper => {
-        const savedData = localStorage.getItem(`camper_${camper.id}_missions`);
-        if (savedData) {
-          const completed = JSON.parse(savedData);
-          if (completed.length > 0) {
-            totalCompletedMissions += completed.length;
-            totalCampersWithMissions++;
+      // For admin view, show camp-wide statistics
+      const totalCampers = CAMP_DATA.reduce((sum, bunk) => sum + bunk.campers.length, 0);
+      let qualifiedCampers = 0;
+      let totalCompletions = 0;
+
+      CAMP_DATA.forEach(bunk => {
+        bunk.campers.forEach(camper => {
+          const approved = JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]');
+          const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
+          
+          if (approved.length >= dailyRequired) {
+            qualifiedCampers++;
           }
-        }
+          totalCompletions += approved.length;
+        });
       });
-      
+
       return {
-        completed: totalCampersWithMissions,
-        total: bunkCampers.length,
-        missions: totalCompletedMissions,
-        isToday: dateKey === today,
-        isFuture: dateKey > today
+        qualifiedCampers,
+        totalCampers,
+        totalCompletions,
+        qualificationRate: Math.round((qualifiedCampers / totalCampers) * 100)
       };
     } else {
-      // Individual camper view
-      if (!camperId) return { completed: 0, total: missions.length, missions: [], isToday: false, isFuture: false };
-      
-      const savedData = localStorage.getItem(`camper_${camperId}_history_${dateKey}`);
-      if (savedData) {
-        return { ...JSON.parse(savedData), isToday: dateKey === today, isFuture: dateKey > today };
-      }
-      
-      const isToday = dateKey === today;
-      if (isToday) {
-        return {
-          completed: completedMissions.size,
-          total: missions.length,
-          missions: [...completedMissions],
-          isToday: true,
-          isFuture: false
-        };
-      }
-      
+      // For individual camper view
+      const dateKey = date.toISOString().split('T')[0];
+      const dayCompletions = Array.from(completedMissions).filter(missionId => {
+        const completionDate = localStorage.getItem(`mission_${missionId}_completed_${camperId}`);
+        return completionDate && completionDate.startsWith(dateKey);
+      });
+
       return {
-        completed: 0,
-        total: missions.length,
-        missions: [],
-        isToday: false,
-        isFuture: dateKey > today
+        completions: dayCompletions.length,
+        isQualified: dayCompletions.length >= parseInt(localStorage.getItem('mission_daily_required') || '3')
       };
     }
   };
 
-  const getDayColor = (date: Date) => {
-    const data = getCompletionDataForDate(date);
-    if (data.isFuture) return '';
+  const renderCalendarDay = (day: number) => {
+    const date = new Date(currentYear, currentMonth, day);
+    const isToday = date.toDateString() === today.toDateString();
+    const isPast = date < today;
+    const isFuture = date > today;
     
-    const percentage = data.total > 0 ? (data.completed / data.total) * 100 : 0;
-    
-    if (percentage === 100) return 'bg-green-500 text-white hover:bg-green-600';
-    if (percentage >= 75) return 'bg-green-300 hover:bg-green-400';
-    if (percentage >= 50) return 'bg-yellow-300 hover:bg-yellow-400';
-    if (percentage >= 25) return 'bg-orange-300 hover:bg-orange-400';
-    if (percentage > 0) return 'bg-red-300 hover:bg-red-400';
-    return 'hover:bg-gray-100';
+    const dayData = getDayData(date);
+    const hebrewDate = showHebrewDates ? formatHebrewDate(date) : null;
+
+    return (
+      <div
+        key={day}
+        className={`
+          min-h-24 p-2 border border-gray-200 rounded-lg transition-all hover:shadow-md
+          ${isToday ? 'bg-blue-50 border-blue-300' : 'bg-white'}
+          ${isPast ? 'opacity-75' : ''}
+          ${isFuture ? 'opacity-50' : ''}
+        `}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <span className={`text-sm font-semibold ${isToday ? 'text-blue-600' : 'text-gray-600'}`}>
+            {day}
+          </span>
+          {hebrewDate && (
+            <span className="text-xs text-purple-600 font-medium">
+              {hebrewDate.split(' ')[0]}
+            </span>
+          )}
+        </div>
+
+        {isAdminView ? (
+          <div className="space-y-1">
+            <div className="flex items-center space-x-1">
+              <Users className="h-3 w-3 text-blue-500" />
+              <span className="text-xs">{dayData.qualifiedCampers}/{dayData.totalCampers}</span>
+            </div>
+            <Badge 
+              variant={dayData.qualificationRate >= 80 ? "default" : dayData.qualificationRate >= 60 ? "secondary" : "destructive"}
+              className="text-xs px-1 py-0"
+            >
+              {dayData.qualificationRate}%
+            </Badge>
+            <div className="text-xs text-gray-500">
+              {dayData.totalCompletions} total
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <div className="flex items-center space-x-1">
+              {dayData.isQualified ? (
+                <CheckCircle className="h-3 w-3 text-green-500" />
+              ) : (
+                <XCircle className="h-3 w-3 text-red-500" />
+              )}
+              <span className="text-xs">{dayData.completions}</span>
+            </div>
+            <Badge 
+              variant={dayData.isQualified ? "default" : "secondary"}
+              className="text-xs px-1 py-0"
+            >
+              {dayData.isQualified ? 'Qualified' : 'Missing'}
+            </Badge>
+          </div>
+        )}
+      </div>
+    );
   };
 
-  const selectedDateData = selectedDate ? getCompletionDataForDate(selectedDate) : null;
-
-  const exportCalendarData = () => {
-    // Implementation for calendar data export
-    console.log('Exporting calendar data...');
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentDate(new Date(currentYear, currentMonth + (direction === 'next' ? 1 : -1), 1));
   };
+
+  const calendarDays = [];
+  
+  // Empty cells for days before month starts
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    calendarDays.push(<div key={`empty-${i}`} className="min-h-24"></div>);
+  }
+  
+  // Days of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    calendarDays.push(renderCalendarDay(day));
+  }
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>{isAdminView ? 'Camp-Wide Mission Calendar' : 'Mission Calendar'}</span>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="hebrew-calendar"
-                  checked={showHebrewCalendar}
-                  onCheckedChange={setShowHebrewCalendar}
-                />
-                <Label htmlFor="hebrew-calendar" className="text-xs">Hebrew</Label>
-              </div>
-              <Button variant="outline" size="sm" onClick={exportCalendarData}>
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardTitle>
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-            >
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-medium">
-              {showHebrewCalendar 
-                ? getHebrewDate(currentMonth)
-                : currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-              }
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-            >
+            <h2 className="text-xl font-semibold">
+              {monthNames[currentMonth]} {currentYear}
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {showFilters && (
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-4">
-                <Label className="text-xs">View:</Label>
-                {(['daily', 'weekly', 'monthly'] as const).map(mode => (
-                  <Button
-                    key={mode}
-                    variant={viewMode === mode ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode(mode)}
-                    className="text-xs"
-                  >
-                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            month={currentMonth}
-            onMonthChange={setCurrentMonth}
-            className="rounded-md border"
-            modifiers={{
-              completed: (date) => {
-                const data = getCompletionDataForDate(date);
-                return !data.isFuture && data.completed === data.total && data.total > 0;
-              },
-              partial: (date) => {
-                const data = getCompletionDataForDate(date);
-                return !data.isFuture && data.completed > 0 && data.completed < data.total;
-              },
-              future: (date) => {
-                const data = getCompletionDataForDate(date);
-                return data.isFuture;
-              }
-            }}
-            modifiersStyles={{
-              completed: { backgroundColor: '#10b981', color: 'white' },
-              partial: { backgroundColor: '#f59e0b', color: 'white' },
-              future: { backgroundColor: '#f3f4f6', color: '#9ca3af' }
-            }}
-            formatters={showHebrewCalendar ? {
-              formatDay: (date) => HEBREW_DAYS[date.getDay()],
-              formatMonthCaption: (date) => getHebrewDate(date)
-            } : undefined}
-          />
-          
-          <div className="mt-4 flex items-center justify-center space-x-4 text-xs">
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-green-500 rounded"></div>
-              <span>{isAdminView ? 'All Completed' : 'Completed'}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-              <span>Partial</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-gray-300 rounded"></div>
-              <span>Not Started</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-gray-200 rounded"></div>
-              <span>Future</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-        <CardHeader>
-          <CardTitle>
-            {selectedDate ? (showHebrewCalendar 
-              ? getHebrewDate(selectedDate)
-              : selectedDate.toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })
-            ) : 'Select a Date'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {selectedDateData ? (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900">
-                  {isAdminView 
-                    ? `${selectedDateData.completed}/${selectedDateData.total}`
-                    : `${selectedDateData.completed}/${selectedDateData.total}`
-                  }
+        <div className="flex items-center space-x-2">
+          <Button
+            variant={showHebrewDates ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowHebrewDates(!showHebrewDates)}
+          >
+            Hebrew Calendar
+          </Button>
+          <Button
+            variant={viewMode === 'month' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode('month')}
+          >
+            Month
+          </Button>
+          <Button
+            variant={viewMode === 'week' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode('week')}
+          >
+            Week
+          </Button>
+        </div>
+      </div>
+
+      {isAdminView && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="grid md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {CAMP_DATA.reduce((sum, bunk) => sum + bunk.campers.length, 0)}
                 </div>
-                <p className="text-gray-600">
-                  {isAdminView ? 'Campers with Missions' : 'Missions Completed'}
-                </p>
-                {isAdminView && (
-                  <p className="text-sm text-gray-500">
-                    Total Missions: {selectedDateData.missions}
-                  </p>
-                )}
-                <div className="mt-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${selectedDateData.total > 0 ? (selectedDateData.completed / selectedDateData.total) * 100 : 0}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
+                <div className="text-sm text-gray-600">Total Campers</div>
               </div>
-              
-              {selectedDateData.isFuture && (
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-500">This date is in the future</p>
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  {missions.filter(m => m.isActive).length}
                 </div>
-              )}
-              
-              {!isAdminView && !selectedDateData.isFuture && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-gray-900">Completed Missions:</h4>
-                  {selectedDateData.missions.length > 0 ? (
-                    <div className="grid gap-2">
-                      {missions
-                        .filter(m => selectedDateData.missions.includes(m.id))
-                        .map(mission => (
-                          <div key={mission.id} className="flex items-center space-x-2 p-2 bg-green-50 rounded">
-                            <span className="text-green-600">✓</span>
-                            <span className="text-sm">{mission.title}</span>
-                          </div>
-                        ))
-                      }
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-sm">No missions completed on this day</p>
-                  )}
+                <div className="text-sm text-gray-600">Active Missions</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {localStorage.getItem('mission_daily_required') || '3'}
                 </div>
-              )}
+                <div className="text-sm text-gray-600">Daily Required</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600">
+                  Session {localStorage.getItem('current_session') || '0'}
+                </div>
+                <div className="text-sm text-gray-600">Current Session</div>
+              </div>
             </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">
-              Select a date to view details
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-7 gap-2">
+        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+          <div key={day} className="text-center font-semibold text-gray-600 py-2">
+            {day.slice(0, 3)}
+          </div>
+        ))}
+        {calendarDays}
+      </div>
+
+      <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+        <div className="flex items-center space-x-2">
+          <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+          <span>Today</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <CheckCircle className="h-3 w-3 text-green-500" />
+          <span>Qualified</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <XCircle className="h-3 w-3 text-red-500" />
+          <span>Not Qualified</span>
+        </div>
+        {isAdminView && (
+          <div className="flex items-center space-x-2">
+            <Users className="h-3 w-3 text-blue-500" />
+            <span>Camp Stats</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, Settings, BarChart3, Plus, Edit, Trash2, Home, Eye } from 'lucide-react';
+import { LogOut, Users, Settings, BarChart3, Plus, Edit, Trash2, Home, Eye, Upload, Download, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import AdminLogin from '@/components/AdminLogin';
@@ -11,9 +11,13 @@ import BunkManagementDialog from '@/components/BunkManagementDialog';
 import MissionEditDialog from '@/components/MissionEditDialog';
 import CamperEditDialog from '@/components/CamperEditDialog';
 import CamperDetailsModal from '@/components/CamperDetailsModal';
-import CamperCalendar from '@/components/CamperCalendar';
+import EnhancedCalendar from '@/components/EnhancedCalendar';
+import AdminCamperDashboard from '@/components/AdminCamperDashboard';
+import SessionManagement from '@/components/SessionManagement';
+import MissionAnalytics from '@/components/MissionAnalytics';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
 import MissionRequirementDialog from '@/components/MissionRequirementDialog';
+import { downloadFullReport, importData } from '@/utils/dataExport';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -163,6 +167,46 @@ const AdminDashboard = () => {
     });
   };
 
+  const handleExportData = () => {
+    try {
+      downloadFullReport();
+      toast({
+        title: "Export Successful",
+        description: "All camp data has been exported successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting the data",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleImportData = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          if (importData(content)) {
+            toast({
+              title: "Import Successful",
+              description: "Data has been imported successfully",
+            });
+            window.location.reload(); // Refresh to show imported data
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
   if (!isAuthenticated) {
     return <AdminLogin onLogin={handleAdminLogin} onBack={handleBackToHome} />;
   }
@@ -220,6 +264,26 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleImportData}
+                className="flex items-center space-x-2"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Import Data</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportData}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export All</span>
+              </Button>
+            </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-sm text-gray-600">Online</span>
@@ -305,11 +369,13 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="bunks" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="bunks">Bunks</TabsTrigger>
             <TabsTrigger value="missions">Missions</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="campers">Campers</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="session">Session</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -421,6 +487,17 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="analytics">
+            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+              <CardHeader>
+                <CardTitle>Mission Analytics & Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MissionAnalytics />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="campers">
             <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
               <CardHeader>
@@ -474,11 +551,23 @@ const AdminDashboard = () => {
                 <CardTitle>Admin Calendar View</CardTitle>
               </CardHeader>
               <CardContent>
-                <CamperCalendar 
+                <EnhancedCalendar 
                   completedMissions={new Set()} 
                   missions={missions.filter(m => m.isActive)} 
-                  camperId="admin" 
+                  camperId="admin"
+                  isAdminView={true}
                 />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="session">
+            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+              <CardHeader>
+                <CardTitle>Session Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SessionManagement />
               </CardContent>
             </Card>
           </TabsContent>
@@ -486,50 +575,22 @@ const AdminDashboard = () => {
           <TabsContent value="reports">
             <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
               <CardHeader>
-                <CardTitle>Reports & Analytics</CardTitle>
+                <CardTitle className="flex justify-between items-center">
+                  <span>Reports & Data Management</span>
+                  <div className="flex items-center space-x-2">
+                    <Button onClick={handleImportData} variant="outline" size="sm">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import Backup
+                    </Button>
+                    <Button onClick={handleExportData} size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export All Data
+                    </Button>
+                  </div>
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Daily Summary</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Missions Completed Today</span>
-                        <span className="font-semibold">{Math.floor(totalCampers * activeMissions * 0.75)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Average Completion Rate</span>
-                        <span className="font-semibold">{overallProgress}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Most Active Bunk</span>
-                        <span className="font-semibold">Bunk {bunkStats.reduce((max, bunk) => bunk.avgProgress > max.avgProgress ? bunk : max).name}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Mission Analytics</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Most Popular Mission</span>
-                        <span className="font-semibold">Morning Prayer</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Completion Rate</span>
-                        <span className="font-semibold">94%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Missions</span>
-                        <span className="font-semibold">{missions.length}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <Button onClick={() => toast({ title: "Export Data", description: "Report export would start here" })}>
-                    Export Full Report
-                  </Button>
-                </div>
+                <AdminCamperDashboard />
               </CardContent>
             </Card>
           </TabsContent>

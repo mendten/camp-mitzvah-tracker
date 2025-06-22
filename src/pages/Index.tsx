@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,31 +6,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Users, Shield, UserCheck, LogIn } from 'lucide-react';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
 import { CAMP_DATA } from '@/data/campData';
+
 const Index = () => {
   const navigate = useNavigate();
   const hebrewDate = getCurrentHebrewDate();
+  
   const bunkColors = {
     alef: 'from-blue-400 to-blue-600',
     beis: 'from-green-400 to-green-600',
     gimmel: 'from-purple-400 to-purple-600',
     daled: 'from-orange-400 to-orange-600'
   };
+
   const handleBunkSelect = (bunkId: string) => {
     localStorage.setItem('selectedBunkId', bunkId);
     navigate('/camper-login');
   };
-  return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 relative">
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 relative">
       {/* Logo Watermark Background */}
-      <div className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-contain pointer-events-none" style={{
-      backgroundImage: 'url(/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png)'
-    }} />
+      <div 
+        className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-contain pointer-events-none" 
+        style={{
+          backgroundImage: 'url(/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png)'
+        }} 
+      />
       
       {/* Header */}
       <header className="bg-white/90 backdrop-blur shadow-lg border-b relative z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <img src="/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png" alt="Camp Gan Yisroel Florida Logo" className="h-16 w-16 object-contain" />
+              <img 
+                src="/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png" 
+                alt="Camp Gan Yisroel Florida Logo" 
+                className="h-16 w-16 object-contain" 
+              />
               <div>
                 <h1 className="text-3xl font-bold text-blue-800">
                   Welcome to Gan Yisroel Florida!!
@@ -40,11 +53,19 @@ const Index = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Button onClick={() => navigate('/staff')} variant="outline" className="bg-green-50 hover:bg-green-100 border-green-300">
+              <Button 
+                onClick={() => navigate('/staff')} 
+                variant="outline" 
+                className="bg-green-50 hover:bg-green-100 border-green-300"
+              >
                 <UserCheck className="h-4 w-4 mr-2" />
                 Staff Portal
               </Button>
-              <Button onClick={() => navigate('/admin')} variant="outline" className="bg-purple-50 hover:bg-purple-100 border-purple-300">
+              <Button 
+                onClick={() => navigate('/admin')} 
+                variant="outline" 
+                className="bg-purple-50 hover:bg-purple-100 border-purple-300"
+              >
                 <Shield className="h-4 w-4 mr-2" />
                 Admin Portal
               </Button>
@@ -69,7 +90,12 @@ const Index = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {CAMP_DATA.map(bunk => <Card key={bunk.id} className="bg-white/80 backdrop-blur shadow-xl border-0 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group" onClick={() => handleBunkSelect(bunk.id)}>
+            {CAMP_DATA.map(bunk => (
+              <Card 
+                key={bunk.id} 
+                className="bg-white/80 backdrop-blur shadow-xl border-0 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group" 
+                onClick={() => handleBunkSelect(bunk.id)}
+              >
                 <CardHeader className="text-center space-y-4">
                   <div className={`mx-auto w-20 h-20 bg-gradient-to-br ${bunkColors[bunk.id as keyof typeof bunkColors]} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
                     <Users className="h-10 w-10 text-white" />
@@ -81,10 +107,14 @@ const Index = () => {
                     <div>
                       <h4 className="font-semibold text-sm text-gray-700 mb-2">Campers ({bunk.campers.length})</h4>
                       <div className="text-xs text-gray-600 max-h-20 overflow-y-auto">
-                        {bunk.campers.slice(0, 5).map((camper, index) => <div key={camper.id} className="truncate">
+                        {bunk.campers.slice(0, 5).map((camper, index) => (
+                          <div key={camper.id} className="truncate">
                             {camper.name}
-                          </div>)}
-                        {bunk.campers.length > 5 && <div className="text-gray-500 italic">+{bunk.campers.length - 5} more...</div>}
+                          </div>
+                        ))}
+                        {bunk.campers.length > 5 && (
+                          <div className="text-gray-500 italic">+{bunk.campers.length - 5} more...</div>
+                        )}
                       </div>
                     </div>
                     
@@ -103,7 +133,8 @@ const Index = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>)}
+              </Card>
+            ))}
           </div>
         </div>
 
@@ -113,6 +144,8 @@ const Index = () => {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
