@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import CamperLogin from "./pages/CamperLogin";
 import CamperDashboard from "./pages/CamperDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -20,6 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/camper-login" element={<CamperLogin />} />
           <Route path="/camper" element={<CamperDashboard />} />
           <Route path="/staff" element={<StaffDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />

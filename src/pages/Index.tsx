@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -60,7 +59,7 @@ const Index = () => {
                 </div>
               </div>
               <Button 
-                onClick={() => navigate('/camper')}
+                onClick={() => navigate('/camper-login')}
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
               >
                 Enter Camper Dashboard
