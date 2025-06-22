@@ -1,40 +1,47 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BunkSelector from '@/components/BunkSelector';
 import CamperSelector from '@/components/CamperSelector';
+import { CAMP_DATA } from '@/data/campData';
 
 const CamperLogin = () => {
-  const [selectedBunk, setSelectedBunk] = useState<string>('');
   const navigate = useNavigate();
+  const [selectedBunkId, setSelectedBunkId] = useState<string>('');
 
-  const handleSelectBunk = (bunkId: string) => {
-    setSelectedBunk(bunkId);
-  };
-
-  const handleSelectCamper = (camperId: string) => {
-    // Store the selected camper in localStorage for the dashboard
-    localStorage.setItem('selectedCamper', camperId);
-    localStorage.setItem('selectedBunk', selectedBunk);
-    navigate('/camper');
-  };
-
-  const handleBack = () => {
-    if (selectedBunk) {
-      setSelectedBunk('');
-    } else {
+  useEffect(() => {
+    const bunkId = localStorage.getItem('selectedBunkId');
+    if (!bunkId) {
       navigate('/');
+      return;
+    }
+    setSelectedBunkId(bunkId);
+  }, [navigate]);
+
+  const handleCamperSelect = (camperId: string) => {
+    const bunk = CAMP_DATA.find(b => b.id === selectedBunkId);
+    const camper = bunk?.campers.find(c => c.id === camperId);
+    
+    if (camper) {
+      localStorage.setItem('currentCamperId', camperId);
+      localStorage.setItem('currentCamperName', camper.name);
+      localStorage.setItem('currentBunkId', selectedBunkId);
+      navigate('/camper');
     }
   };
 
-  if (!selectedBunk) {
-    return <BunkSelector onSelectBunk={handleSelectBunk} />;
+  const handleBack = () => {
+    localStorage.removeItem('selectedBunkId');
+    navigate('/');
+  };
+
+  if (!selectedBunkId) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <CamperSelector 
-      bunkId={selectedBunk} 
-      onSelectCamper={handleSelectCamper}
+    <CamperSelector
+      bunkId={selectedBunkId}
+      onSelectCamper={handleCamperSelect}
       onBack={handleBack}
     />
   );

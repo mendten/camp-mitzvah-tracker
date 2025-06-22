@@ -17,8 +17,10 @@ const HEBREW_NUMBERS: { [key: number]: string } = {
   21: 'כ"א', 22: 'כ"ב', 23: 'כ"ג', 24: 'כ"ד', 25: 'כ"ה', 26: 'כ"ו', 27: 'כ"ז', 28: 'כ"ח', 29: 'כ"ט', 30: 'ל\''
 };
 
+// Hebrew days of week
+const HEBREW_DAYS = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'שבת'];
+
 export function getCurrentHebrewDate(): HebrewDate {
-  // Get the current Hebrew year (תשפ"ה for 2024-2025)
   const now = new Date();
   const currentYear = now.getFullYear();
   
@@ -43,10 +45,37 @@ export function getCurrentHebrewDate(): HebrewDate {
   return { hebrew, english };
 }
 
+export function getHebrewDateForDate(date: Date): HebrewDate {
+  const day = date.getDate();
+  const month = HEBREW_MONTHS[date.getMonth()];
+  const year = 'תשפ"ה';
+  const dayOfWeek = HEBREW_DAYS[date.getDay()];
+  
+  const hebrewDay = HEBREW_NUMBERS[day] || day.toString();
+  const hebrew = `${dayOfWeek}, ${hebrewDay} ${month} ${year}`;
+  
+  const english = date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  return { hebrew, english };
+}
+
 export function getSessionInfo(sessionConfig: any) {
   const { currentSession, currentWeek, currentDay } = sessionConfig;
   return {
     hebrew: `שבוע ${currentWeek}, יום ${currentDay} - מחנה קיץ`,
     english: `Week ${currentWeek}, Day ${currentDay} - Session ${currentSession}`
   };
+}
+
+export function formatHebrewDate(date: Date): string {
+  const day = date.getDate();
+  const month = HEBREW_MONTHS[date.getMonth()];
+  const year = 'תשפ"ה';
+  const hebrewDay = HEBREW_NUMBERS[day] || day.toString();
+  return `${hebrewDay} ${month} ${year}`;
 }
