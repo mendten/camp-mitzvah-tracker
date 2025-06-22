@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, Circle, Star, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
 
 interface Mission {
   id: number;
@@ -18,18 +17,6 @@ interface MissionCardProps {
 }
 
 const MissionCard: React.FC<MissionCardProps> = ({ mission, onToggle }) => {
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'prayer': return 'bg-yellow-500';
-      case 'learning': return 'bg-blue-500';
-      case 'mitzvah': return 'bg-red-500';
-      case 'activity': return 'bg-green-500';
-      case 'reflection': return 'bg-purple-500';
-      case 'shabbat': return 'bg-indigo-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
   const getTypeGradient = (type: string) => {
     switch (type) {
       case 'prayer': return 'from-yellow-400 to-orange-500';
@@ -62,7 +49,6 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onToggle }) => {
             {mission.completed ? (
               <div className="relative">
                 <CheckCircle2 className="h-8 w-8 text-green-500 animate-scale-in" />
-                <Star className="h-4 w-4 text-yellow-400 absolute -top-1 -right-1 animate-pulse" />
               </div>
             ) : (
               <div className="flex items-center space-x-1">
@@ -106,9 +92,8 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onToggle }) => {
 
         {mission.completed && (
           <div className="mt-3 text-center">
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 animate-fade-in">
-              <Star className="h-3 w-3 mr-1" />
-              +5 points earned!
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 animate-fade-in">
+              Great job! 🎉
             </span>
           </div>
         )}

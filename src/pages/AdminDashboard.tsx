@@ -1,13 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, Settings, BarChart3, Plus, Edit, Trash2, Home } from 'lucide-react';
+import { LogOut, Users, Settings, BarChart3, Plus, Edit, Trash2, Home, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import AdminLogin from '@/components/AdminLogin';
+import BunkManagementDialog from '@/components/BunkManagementDialog';
+import MissionEditDialog from '@/components/MissionEditDialog';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
 
 const AdminDashboard = () => {
@@ -15,6 +16,11 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [missions, setMissions] = useState(DEFAULT_MISSIONS);
+  const [selectedBunk, setSelectedBunk] = useState<any>(null);
+  const [showBunkManagement, setShowBunkManagement] = useState(false);
+  const [showMissionEdit, setShowMissionEdit] = useState(false);
+  const [editingMission, setEditingMission] = useState<any>(null);
+  const [showStatDetails, setShowStatDetails] = useState<{ type: string; data: any } | null>(null);
   const hebrewDate = getCurrentHebrewDate();
 
   useEffect(() => {
@@ -41,16 +47,86 @@ const AdminDashboard = () => {
     localStorage.removeItem('adminAuthenticated');
   };
 
-  const toggleMissionActive = (missionId: string) => {
-    setMissions(prev => prev.map(mission => 
-      mission.id === missionId 
-        ? { ...mission, isActive: !mission.isActive }
-        : mission
-    ));
-    toast({
-      title: "Mission Updated",
-      description: "Mission status changed successfully",
-    });
+  const handleManageBunk = (bunk: any) => {
+    setSelectedBunk(bunk);
+    setShowBunkManagement(true);
+  };
+
+  const handleEditMission = (mission: any) => {
+    setEditingMission(mission);
+    setShowMissionEdit(true);
+  };
+
+  const handleCreateMission = () => {
+    setEditingMission(null);
+    setShowMissionEdit(true);
+  };
+
+  const handleSaveMission = (mission: any) => {
+    if (mission.id) {
+      // Edit existing mission
+      setMissions(prev => prev.map(m => m.id === mission.id ? mission : m));
+    } else {
+      // Create new mission
+      const newMission = { ...mission, id: `mission_${Date.now()}` };
+      setMissions(prev => [...prev, newMission]);
+    }
+  };
+
+  const handleDeleteMission = (missionId: string) => {
+    setMissions(prev => prev.filter(m => m.id !== missionId));
+  };
+
+  const handleStatClick = (type: string) => {
+    let data = {};
+    
+    switch (type) {
+      case 'campers':
+        data = {
+          title: 'Total Campers Breakdown',
+          items: CAMP_DATA.map(bunk => ({
+            name: `Bunk ${bunk.displayName}`,
+            count: bunk.campers.length,
+            details: bunk.campers.map(c => c.name).join(', ')
+          }))
+        };
+        break;
+      case 'staff':
+        data = {
+          title: 'Staff Distribution',
+          items: CAMP_DATA.map(bunk => ({
+            name: `Bunk ${bunk.displayName}`,
+            count: bunk.staff.length,
+            details: bunk.staff.map(s => s.name).join(', ')
+          }))
+        };
+        break;
+      case 'progress':
+        data = {
+          title: 'Progress Details',
+          items: CAMP_DATA.map(bunk => {
+            const avgProgress = Math.floor(Math.random() * 30) + 70;
+            return {
+              name: `Bunk ${bunk.displayName}`,
+              count: `${avgProgress}%`,
+              details: `${bunk.campers.length} campers averaging ${avgProgress}% completion`
+            };
+          })
+        };
+        break;
+      case 'missions':
+        data = {
+          title: 'Active Missions Details',
+          items: missions.filter(m => m.isActive).map(mission => ({
+            name: mission.title,
+            count: mission.type,
+            details: `${mission.isMandatory ? 'Mandatory' : 'Optional'} ${mission.type} mission`
+          }))
+        };
+        break;
+    }
+    
+    setShowStatDetails({ type, data });
   };
 
   if (!isAuthenticated) {
@@ -129,7 +205,10 @@ const AdminDashboard = () => {
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="grid md:grid-cols-4 gap-4">
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow"
+            onClick={() => handleStatClick('campers')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Users className="h-5 w-5 text-blue-600" />
@@ -142,7 +221,10 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow"
+            onClick={() => handleStatClick('staff')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Users className="h-5 w-5 text-green-600" />
@@ -155,7 +237,10 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow"
+            onClick={() => handleStatClick('progress')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <BarChart3 className="h-5 w-5 text-purple-600" />
@@ -168,11 +253,14 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow"
+            onClick={() => handleStatClick('missions')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Settings className="h-5 w-5 text-orange-600" />
-                <span>Active Missions</span>
+                <span>Missions</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -204,7 +292,7 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {bunkStats.map((bunk) => (
-                    <Card key={bunk.id} className="border hover:shadow-md transition-shadow cursor-pointer">
+                    <Card key={bunk.id} className="border hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           <h3 className="font-semibold text-gray-900 text-lg">Bunk {bunk.name}</h3>
@@ -222,7 +310,12 @@ const AdminDashboard = () => {
                               <span className="font-semibold text-green-600">{bunk.avgProgress}%</span>
                             </div>
                           </div>
-                          <Button size="sm" variant="outline" className="w-full">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => handleManageBunk(CAMP_DATA.find(b => b.id === bunk.id))}
+                          >
                             Manage
                           </Button>
                         </div>
@@ -239,7 +332,7 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   <span>Mission Management</span>
-                  <Button size="sm" onClick={() => toast({ title: "Add Mission", description: "Mission creation form would open here" })}>
+                  <Button size="sm" onClick={handleCreateMission}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Mission
                   </Button>
@@ -260,21 +353,19 @@ const AdminDashboard = () => {
                                 Mandatory
                               </span>
                             )}
+                            {!mission.isActive && (
+                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
+                                Inactive
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button
-                          size="sm"
-                          variant={mission.isActive ? "default" : "outline"}
-                          onClick={() => toggleMissionActive(mission.id)}
-                        >
-                          {mission.isActive ? "Active" : "Inactive"}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => toast({ title: "Edit Mission", description: `Editing ${mission.title}` })}>
+                        <Button size="sm" variant="outline" onClick={() => handleEditMission(mission)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => toast({ title: "Delete Mission", description: `${mission.title} would be deleted`, variant: "destructive" })}>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteMission(mission.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -320,7 +411,7 @@ const AdminDashboard = () => {
                               Edit
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => toast({ title: "View Camper", description: `Viewing ${camper.name}'s profile` })}>
-                              View
+                              <Eye className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
@@ -368,8 +459,8 @@ const AdminDashboard = () => {
                         <span className="font-semibold">94%</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Active Missions</span>
-                        <span className="font-semibold">{activeMissions}/{missions.length}</span>
+                        <span>Total Missions</span>
+                        <span className="font-semibold">{missions.length}</span>
                       </div>
                     </div>
                   </div>
@@ -384,6 +475,48 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <BunkManagementDialog
+        isOpen={showBunkManagement}
+        onClose={() => setShowBunkManagement(false)}
+        bunk={selectedBunk}
+      />
+
+      <MissionEditDialog
+        isOpen={showMissionEdit}
+        onClose={() => setShowMissionEdit(false)}
+        mission={editingMission}
+        onSave={handleSaveMission}
+        onDelete={handleDeleteMission}
+      />
+
+      {showStatDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowStatDetails(null)}>
+          <Card className="max-w-2xl w-full m-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <span>{showStatDetails.data.title}</span>
+                <Button variant="outline" size="sm" onClick={() => setShowStatDetails(null)}>
+                  Close
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {showStatDetails.data.items.map((item: any, index: number) => (
+                  <div key={index} className="flex justify-between items-start p-3 border rounded-lg">
+                    <div>
+                      <p className="font-semibold">{item.name}</p>
+                      <p className="text-sm text-gray-600">{item.details}</p>
+                    </div>
+                    <span className="font-bold text-lg">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

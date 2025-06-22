@@ -1,165 +1,128 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, Edit3, CheckCircle2, Circle, Eye, Home } from 'lucide-react';
+import { LogOut, Users, CheckCircle2, Calendar, Eye, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import StaffLogin from '@/components/StaffLogin';
-import { getCurrentHebrewDate } from '@/utils/hebrewDate';
-
-interface CamperProgress {
-  id: string;
-  name: string;
-  progress: number;
-  missions: number;
-  total: number;
-  online: boolean;
-  completedMissions: string[];
-  pendingMissions: string[];
-}
+import BulkCompleteDialog from '@/components/BulkCompleteDialog';
+import CamperDetailsModal from '@/components/CamperDetailsModal';
+import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentStaff, setCurrentStaff] = useState<string>('');
-  const [currentBunk, setCurrentBunk] = useState<string>('');
-  const [campers, setCampers] = useState<CamperProgress[]>([]);
+  const [staffData, setStaffData] = useState<any>(null);
+  const [bunkData, setBunkData] = useState<any>(null);
+  const [selectedCampers, setSelectedCampers] = useState<string[]>([]);
+  const [showBulkComplete, setShowBulkComplete] = useState(false);
+  const [showCamperDetails, setShowCamperDetails] = useState(false);
+  const [selectedCamperForDetails, setSelectedCamperForDetails] = useState<any>(null);
   const hebrewDate = getCurrentHebrewDate();
+  const sessionInfo = getSessionInfo({ currentSession: 1, currentWeek: 3, currentDay: 4 });
 
   useEffect(() => {
     // Check if staff is already logged in
-    const savedStaff = localStorage.getItem('currentStaff');
-    const savedBunk = localStorage.getItem('staffBunk');
-    if (savedStaff && savedBunk) {
-      setCurrentStaff(savedStaff);
-      setCurrentBunk(savedBunk);
-      setIsAuthenticated(true);
-      loadCamperData(savedBunk);
-    }
-  }, []);
+    const isStaffLoggedIn = localStorage.getItem('staffAuthenticated');
+    if (isStaffLoggedIn === 'true') {
+      const staffId = localStorage.getItem('staffId');
+      const staffBunkId = localStorage.getItem('staffBunkId');
 
-  const loadCamperData = (bunkId: string) => {
-    const bunk = CAMP_DATA.find(b => b.id === bunkId);
-    if (!bunk) return;
+      if (staffId && staffBunkId) {
+        const bunk = CAMP_DATA.find(b => b.id === staffBunkId);
+        const staff = bunk?.staff.find(s => s.id === staffId);
 
-    const missionTitles = DEFAULT_MISSIONS.filter(m => m.isActive).map(m => m.title);
-    const totalMissions = missionTitles.length;
-
-    const camperData: CamperProgress[] = bunk.campers.map(camper => {
-      // Load saved progress or generate random data
-      const savedProgress = localStorage.getItem(`camper-progress-${camper.id}`);
-      let completedMissions: string[] = [];
-      let pendingMissions: string[] = missionTitles;
-
-      if (savedProgress) {
-        const { missions } = JSON.parse(savedProgress);
-        if (missions && Array.isArray(missions)) {
-          completedMissions = missions.filter((m: any) => m.completed).map((m: any) => m.title);
-          pendingMissions = missions.filter((m: any) => !m.completed).map((m: any) => m.title);
+        if (bunk && staff) {
+          setStaffData(staff);
+          setBunkData(bunk);
+          setIsAuthenticated(true);
+        } else {
+          navigate('/');
         }
       } else {
-        // Generate random progress for simulation
-        const completedCount = Math.floor(Math.random() * (totalMissions + 1));
-        completedMissions = missionTitles.slice(0, completedCount);
-        pendingMissions = missionTitles.slice(completedCount);
+        navigate('/');
       }
-
-      return {
-        id: camper.id,
-        name: camper.name,
-        progress: Math.round((completedMissions.length / totalMissions) * 100),
-        missions: completedMissions.length,
-        total: totalMissions,
-        online: Math.random() > 0.3, // 70% chance of being online
-        completedMissions,
-        pendingMissions
-      };
-    });
-
-    setCampers(camperData);
-  };
+    }
+  }, [navigate]);
 
   const handleStaffLogin = (staffId: string, bunkId: string) => {
-    setCurrentStaff(staffId);
-    setCurrentBunk(bunkId);
-    setIsAuthenticated(true);
-    localStorage.setItem('currentStaff', staffId);
-    localStorage.setItem('staffBunk', bunkId);
-    loadCamperData(bunkId);
+    const bunk = CAMP_DATA.find(b => b.id === bunkId);
+    const staff = bunk?.staff.find(s => s.id === staffId);
+    
+    if (bunk && staff) {
+      setStaffData(staff);
+      setBunkData(bunk);
+      setIsAuthenticated(true);
+      localStorage.setItem('staffAuthenticated', 'true');
+      localStorage.setItem('staffId', staffId);
+      localStorage.setItem('staffBunkId', bunkId);
+    }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    setCurrentStaff('');
-    setCurrentBunk('');
-    localStorage.removeItem('currentStaff');
-    localStorage.removeItem('staffBunk');
+    setStaffData(null);
+    setBunkData(null);
+    localStorage.removeItem('staffAuthenticated');
+    localStorage.removeItem('staffId');
+    localStorage.removeItem('staffBunkId');
     navigate('/');
   };
 
   const handleBackToHome = () => {
     setIsAuthenticated(false);
-    setCurrentStaff('');
-    setCurrentBunk('');
-    localStorage.removeItem('currentStaff');
-    localStorage.removeItem('staffBunk');
+    setStaffData(null);
+    setBunkData(null);
+    localStorage.removeItem('staffAuthenticated');
+    localStorage.removeItem('staffId');
+    localStorage.removeItem('staffBunkId');
   };
 
-  const handleQuickEdit = (camperId: string, missionTitle: string, completed: boolean) => {
-    // Update camper progress in localStorage
-    const savedProgress = localStorage.getItem(`camper-progress-${camperId}`);
-    if (savedProgress) {
-      const progressData = JSON.parse(savedProgress);
-      if (progressData.missions && Array.isArray(progressData.missions)) {
-        const updatedMissions = progressData.missions.map((m: any) => {
-          if (m.title === missionTitle) {
-            return { ...m, completed };
-          }
-          return m;
-        });
-        
-        const newProgressData = {
-          ...progressData,
-          missions: updatedMissions,
-          points: updatedMissions.filter((m: any) => m.completed).length * 5
-        };
-        
-        localStorage.setItem(`camper-progress-${camperId}`, JSON.stringify(newProgressData));
-      }
+  const toggleCamperSelection = (camperId: string) => {
+    setSelectedCampers(prev => 
+      prev.includes(camperId)
+        ? prev.filter(id => id !== camperId)
+        : [...prev, camperId]
+    );
+  };
+
+  const handleBulkComplete = (camperIds: string[], missionIds: string[]) => {
+    camperIds.forEach(camperId => {
+      const existingProgress = localStorage.getItem(`camper_${camperId}_missions`);
+      const currentCompleted = existingProgress ? new Set(JSON.parse(existingProgress)) : new Set();
+      
+      missionIds.forEach(missionId => currentCompleted.add(missionId));
+      
+      localStorage.setItem(`camper_${camperId}_missions`, JSON.stringify([...currentCompleted]));
+    });
+    
+    setSelectedCampers([]);
+  };
+
+  const handleViewCamperDetails = (camper: any) => {
+    setSelectedCamperForDetails(camper);
+    setShowCamperDetails(true);
+  };
+
+  const editCamperProgress = (camperId: string, missionId: string, completed: boolean) => {
+    const existingProgress = localStorage.getItem(`camper_${camperId}_missions`);
+    const currentCompleted = existingProgress ? new Set(JSON.parse(existingProgress)) : new Set();
+    
+    if (completed) {
+      currentCompleted.add(missionId);
+    } else {
+      currentCompleted.delete(missionId);
     }
-
-    // Update local state
-    setCampers(prev => prev.map(camper => {
-      if (camper.id === camperId) {
-        const updatedCompleted = completed 
-          ? [...camper.completedMissions, missionTitle]
-          : camper.completedMissions.filter(m => m !== missionTitle);
-        
-        const updatedPending = completed
-          ? camper.pendingMissions.filter(m => m !== missionTitle)
-          : [...camper.pendingMissions, missionTitle];
-
-        const newProgress = Math.round((updatedCompleted.length / camper.total) * 100);
-
-        return {
-          ...camper,
-          completedMissions: updatedCompleted,
-          pendingMissions: updatedPending,
-          missions: updatedCompleted.length,
-          progress: newProgress
-        };
-      }
-      return camper;
-    }));
-
+    
+    localStorage.setItem(`camper_${camperId}_missions`, JSON.stringify([...currentCompleted]));
+    
     toast({
-      title: completed ? "Mission Completed! 🎉" : "Mission Unchecked",
-      description: `${missionTitle} ${completed ? 'marked as complete' : 'marked as incomplete'} for ${campers.find(c => c.id === camperId)?.name}`,
+      title: "Progress Updated",
+      description: `Mission ${completed ? 'completed' : 'uncompleted'} for camper`,
     });
   };
 
@@ -167,14 +130,30 @@ const StaffDashboard = () => {
     return <StaffLogin onLogin={handleStaffLogin} onBack={handleBackToHome} />;
   }
 
-  const bunkInfo = CAMP_DATA.find(b => b.id === currentBunk);
-  const staffInfo = bunkInfo?.staff.find(s => s.id === currentStaff);
-  const averageProgress = campers.length > 0 ? Math.round(campers.reduce((sum, camper) => sum + camper.progress, 0) / campers.length) : 0;
+  const activeMissions = DEFAULT_MISSIONS.filter(m => m.isActive);
+  const camperNames = bunkData.campers.reduce((acc: any, camper: any) => {
+    acc[camper.id] = camper.name;
+    return acc;
+  }, {});
+
+  // Calculate statistics
+  const totalCampers = bunkData.campers.length;
+  const totalMissionsToday = totalCampers * activeMissions.length;
+  
+  let completedMissionsToday = 0;
+  bunkData.campers.forEach((camper: any) => {
+    const progress = localStorage.getItem(`camper_${camper.id}_missions`);
+    if (progress) {
+      completedMissionsToday += JSON.parse(progress).length;
+    }
+  });
+
+  const completionRate = totalMissionsToday > 0 ? Math.round((completedMissionsToday / totalMissionsToday) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <header className="bg-white shadow-sm border-b p-4">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <Button
               variant="outline"
@@ -186,11 +165,11 @@ const StaffDashboard = () => {
               <span>Home</span>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {staffInfo?.name} - Bunk {bunkInfo?.displayName}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">Staff Dashboard</h1>
               <p className="text-sm text-green-600">{hebrewDate.hebrew}</p>
-              <p className="text-xs text-gray-600">{hebrewDate.english}</p>
+              <p className="text-xs text-gray-600">
+                {staffData.name} - Bunk {bunkData.displayName}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -211,170 +190,272 @@ const StaffDashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
-        <div className="grid md:grid-cols-3 gap-4">
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="grid md:grid-cols-4 gap-4">
           <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
-                <Users className="h-5 w-5 text-green-600" />
-                <span>Bunk Overview</span>
+                <Users className="h-5 w-5 text-blue-600" />
+                <span>Total Campers</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Campers</span>
-                  <span className="font-semibold">{campers.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Average Progress</span>
-                  <span className="font-semibold">{averageProgress}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Online Now</span>
-                  <span className="font-semibold">{campers.filter(c => c.online).length}</span>
-                </div>
-                <Progress value={averageProgress} className="h-2 mt-2" />
-              </div>
+              <div className="text-3xl font-bold text-gray-900">{totalCampers}</div>
+              <p className="text-sm text-gray-600">In your bunk</p>
             </CardContent>
           </Card>
 
           <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Today's Stats</CardTitle>
+              <CardTitle className="text-lg flex items-center space-x-2">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <span>Completed Today</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Completed Missions</span>
-                  <span className="font-semibold text-green-600">
-                    {campers.reduce((sum, c) => sum + c.missions, 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Possible</span>
-                  <span className="font-semibold">
-                    {campers.reduce((sum, c) => sum + c.total, 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Completion Rate</span>
-                  <span className="font-semibold">{averageProgress}%</span>
-                </div>
-              </div>
+              <div className="text-3xl font-bold text-gray-900">{completedMissionsToday}</div>
+              <p className="text-sm text-gray-600">Out of {totalMissionsToday} total</p>
             </CardContent>
           </Card>
 
           <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
+              <CardTitle className="text-lg flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-purple-600" />
+                <span>Completion Rate</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Button size="sm" className="w-full justify-start" variant="outline" onClick={() => toast({ title: "Bulk Actions", description: "Bulk complete form would open here" })}>
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Bulk Complete
-                </Button>
-                <Button size="sm" className="w-full justify-start" variant="outline" onClick={() => toast({ title: "Reports", description: "Bunk report would open here" })}>
-                  <Users className="h-4 w-4 mr-2" />
-                  View Reports
-                </Button>
-              </div>
+              <div className="text-3xl font-bold text-gray-900">{completionRate}%</div>
+              <p className="text-sm text-gray-600">Bunk average</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center space-x-2">
+                <Users className="h-5 w-5 text-orange-600" />
+                <span>Selected</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">{selectedCampers.length}</div>
+              <p className="text-sm text-gray-600">Campers selected</p>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-          <CardHeader>
-            <CardTitle>Camper Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {campers.map((camper) => (
-                <Card key={camper.id} className="border hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <h3 className="font-semibold text-gray-900">{camper.name}</h3>
-                        <div className="flex items-center space-x-1">
-                          <div className={`w-2 h-2 rounded-full ${camper.online ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                          <span className="text-xs text-gray-500">{camper.online ? 'Online' : 'Offline'}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Progress</span>
-                          <span className="font-semibold">{camper.missions}/{camper.total}</span>
-                        </div>
-                        <Progress value={camper.progress} className="h-2" />
-                        <p className="text-xs text-gray-500">{camper.progress}% complete</p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="flex-1">
-                              <Edit3 className="h-3 w-3 mr-1" />
-                              Quick Edit
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>Quick Edit - {camper.name}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="font-semibold mb-2 text-green-600">Completed Missions</h4>
-                                <div className="space-y-2">
-                                  {camper.completedMissions.map((mission) => (
-                                    <div key={mission} className="flex items-center justify-between">
-                                      <span className="text-sm">{mission}</span>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleQuickEdit(camper.id, mission, false)}
-                                      >
-                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              
-                              {camper.pendingMissions.length > 0 && (
-                                <div>
-                                  <h4 className="font-semibold mb-2 text-orange-600">Pending Missions</h4>
-                                  <div className="space-y-2">
-                                    {camper.pendingMissions.map((mission) => (
-                                      <div key={mission} className="flex items-center justify-between">
-                                        <span className="text-sm">{mission}</span>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => handleQuickEdit(camper.id, mission, true)}
-                                        >
-                                          <Circle className="h-4 w-4 text-gray-400" />
-                                        </Button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+        <Tabs defaultValue="campers" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="campers">Camper Management</TabsTrigger>
+            <TabsTrigger value="progress">Progress Tracking</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="campers">
+            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  <span>Camper Management - Bunk {bunkData.displayName}</span>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setShowBulkComplete(true)}
+                      disabled={selectedCampers.length === 0}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Bulk Complete ({selectedCampers.length})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedCampers([])}
+                      disabled={selectedCampers.length === 0}
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {bunkData.campers.map((camper: any) => {
+                    const progress = localStorage.getItem(`camper_${camper.id}_missions`);
+                    const completedMissions = progress ? JSON.parse(progress).length : 0;
+                    const progressPercentage = activeMissions.length > 0 ? Math.round((completedMissions / activeMissions.length) * 100) : 0;
+                    const isSelected = selectedCampers.includes(camper.id);
+
+                    return (
+                      <Card 
+                        key={camper.id} 
+                        className={`border-2 transition-all duration-200 cursor-pointer ${
+                          isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => toggleCamperSelection(camper.id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold text-gray-900">{camper.name}</h3>
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={() => toggleCamperSelection(camper.id)}
+                              />
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                        
-                        <Button size="sm" variant="outline" onClick={() => toast({ title: "Camper Details", description: `Viewing detailed profile for ${camper.name}` })}>
-                          <Eye className="h-3 w-3" />
-                        </Button>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Progress</span>
+                                <span className="font-semibold text-green-600">{progressPercentage}%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Completed</span>
+                                <span className="font-semibold">{completedMissions}/{activeMissions.length}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${progressPercentage}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewCamperDetails(camper);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="progress">
+            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+              <CardHeader>
+                <CardTitle>Individual Progress Tracking</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {bunkData.campers.map((camper: any) => {
+                    const progress = localStorage.getItem(`camper_${camper.id}_missions`);
+                    const completedMissionIds = progress ? new Set(JSON.parse(progress)) : new Set();
+
+                    return (
+                      <Card key={camper.id} className="border">
+                        <CardContent className="p-4">
+                          <h4 className="font-semibold text-lg mb-3">{camper.name}</h4>
+                          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {activeMissions.map(mission => (
+                              <div key={mission.id} className="flex items-center justify-between p-2 border rounded">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">{mission.icon}</span>
+                                  <span className="text-sm">{mission.title}</span>
+                                </div>
+                                <Checkbox
+                                  checked={completedMissionIds.has(mission.id)}
+                                  onCheckedChange={(checked) => 
+                                    editCamperProgress(camper.id, mission.id, checked as boolean)
+                                  }
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+              <CardHeader>
+                <CardTitle>Bunk Reports & Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Daily Summary</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Total Missions Completed</span>
+                        <span className="font-semibold">{completedMissionsToday}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Completion Rate</span>
+                        <span className="font-semibold">{completionRate}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Most Active Camper</span>
+                        <span className="font-semibold">
+                          {bunkData.campers.reduce((max: any, camper: any) => {
+                            const progress = localStorage.getItem(`camper_${camper.id}_missions`);
+                            const completed = progress ? JSON.parse(progress).length : 0;
+                            const maxProgress = localStorage.getItem(`camper_${max.id}_missions`);
+                            const maxCompleted = maxProgress ? JSON.parse(maxProgress).length : 0;
+                            return completed > maxCompleted ? camper : max;
+                          }).name}
+                        </span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Mission Breakdown</h3>
+                    <div className="space-y-2">
+                      {activeMissions.map(mission => {
+                        const completedBy = bunkData.campers.filter((camper: any) => {
+                          const progress = localStorage.getItem(`camper_${camper.id}_missions`);
+                          const completed = progress ? JSON.parse(progress) : [];
+                          return completed.includes(mission.id);
+                        }).length;
+                        const percentage = Math.round((completedBy / totalCampers) * 100);
+
+                        return (
+                          <div key={mission.id} className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span>{mission.icon}</span>
+                              <span className="text-sm">{mission.title}</span>
+                            </div>
+                            <span className="text-sm font-semibold">{completedBy}/{totalCampers} ({percentage}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
+
+      <BulkCompleteDialog
+        isOpen={showBulkComplete}
+        onClose={() => setShowBulkComplete(false)}
+        selectedCampers={selectedCampers}
+        camperNames={camperNames}
+        onBulkComplete={handleBulkComplete}
+      />
+
+      <CamperDetailsModal
+        isOpen={showCamperDetails}
+        onClose={() => setShowCamperDetails(false)}
+        camper={selectedCamperForDetails}
+        bunkName={bunkData?.displayName || ''}
+      />
     </div>
   );
 };
