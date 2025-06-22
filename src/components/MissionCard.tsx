@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
 
 interface Mission {
-  id: number;
+  id: string;
   title: string;
   type: string;
   completed: boolean;
