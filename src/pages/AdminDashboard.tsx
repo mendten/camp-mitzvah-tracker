@@ -9,6 +9,7 @@ import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import AdminLogin from '@/components/AdminLogin';
 import BunkManagementDialog from '@/components/BunkManagementDialog';
 import MissionEditDialog from '@/components/MissionEditDialog';
+import CamperEditDialog from '@/components/CamperEditDialog';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
 
 const AdminDashboard = () => {
@@ -21,6 +22,8 @@ const AdminDashboard = () => {
   const [showMissionEdit, setShowMissionEdit] = useState(false);
   const [editingMission, setEditingMission] = useState<any>(null);
   const [showStatDetails, setShowStatDetails] = useState<{ type: string; data: any } | null>(null);
+  const [showCamperEdit, setShowCamperEdit] = useState(false);
+  const [editingCamper, setEditingCamper] = useState<any>(null);
   const hebrewDate = getCurrentHebrewDate();
 
   useEffect(() => {
@@ -127,6 +130,19 @@ const AdminDashboard = () => {
     }
     
     setShowStatDetails({ type, data });
+  };
+
+  const handleEditCamper = (camper: any) => {
+    setEditingCamper(camper);
+    setShowCamperEdit(true);
+  };
+
+  const handleSaveCamper = (camper: any) => {
+    // In a real app, this would update the database
+    toast({
+      title: "Camper Saved",
+      description: `${camper.name} has been updated successfully`,
+    });
   };
 
   if (!isAuthenticated) {
@@ -406,7 +422,7 @@ const AdminDashboard = () => {
                             <p className="text-gray-600">Missions: {camper.missions}/{camper.total}</p>
                           </div>
                           <div className="flex space-x-2">
-                            <Button size="sm" variant="outline" className="flex-1" onClick={() => toast({ title: "Edit Camper", description: `Editing ${camper.name}` })}>
+                            <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEditCamper(camper)}>
                               <Edit className="h-3 w-3 mr-1" />
                               Edit
                             </Button>
@@ -488,6 +504,13 @@ const AdminDashboard = () => {
         mission={editingMission}
         onSave={handleSaveMission}
         onDelete={handleDeleteMission}
+      />
+
+      <CamperEditDialog
+        isOpen={showCamperEdit}
+        onClose={() => setShowCamperEdit(false)}
+        camper={editingCamper}
+        onSave={handleSaveCamper}
       />
 
       {showStatDetails && (
