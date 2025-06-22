@@ -18,17 +18,20 @@ const HEBREW_NUMBERS: { [key: number]: string } = {
 };
 
 export function getCurrentHebrewDate(): HebrewDate {
+  // Get the current Hebrew year (תשפ"ה for 2024-2025)
   const now = new Date();
+  const currentYear = now.getFullYear();
   
-  // For simulation purposes, let's create a summer date in Hebrew year 5785 (תשפ"ה)
-  // Assuming we're in the month of Sivan (סיון) which is typically when summer camps occur
+  // Calculate Hebrew year: current Gregorian year + 3760 for approximate conversion
+  // For summer 2024, we're in Hebrew year תשפ"ה (5785)
+  const hebrewYear = 'תשפ"ה'; // This is the current Hebrew year for 2024-2025
   
+  // For summer camp, we'll use Sivan (סיון) which is typically June
   const day = 26; // כ"ו
   const month = 'סיון';
-  const year = 'תשפ"ה';
   
   const hebrewDay = HEBREW_NUMBERS[day] || day.toString();
-  const hebrew = `${hebrewDay} ${month} ${year}`;
+  const hebrew = `${hebrewDay} ${month} ${hebrewYear}`;
   
   const english = now.toLocaleDateString('en-US', {
     weekday: 'long',

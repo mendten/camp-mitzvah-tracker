@@ -1,94 +1,148 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, Edit3, CheckCircle2, Circle, Eye } from 'lucide-react';
+import { LogOut, Users, Edit3, CheckCircle2, Circle, Eye, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
+import StaffLogin from '@/components/StaffLogin';
+import { getCurrentHebrewDate } from '@/utils/hebrewDate';
+
+interface CamperProgress {
+  id: string;
+  name: string;
+  progress: number;
+  missions: number;
+  total: number;
+  online: boolean;
+  completedMissions: string[];
+  pendingMissions: string[];
+}
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [campers, setCampers] = useState([
-    { 
-      id: 1, 
-      name: 'David Cohen', 
-      progress: 80, 
-      missions: 4, 
-      total: 5, 
-      online: true,
-      completedMissions: ['Morning Tefillah', 'Torah Study', 'Acts of Kindness', 'Camp Activity'],
-      pendingMissions: ['Evening Reflection']
-    },
-    { 
-      id: 2, 
-      name: 'Sarah Goldberg', 
-      progress: 60, 
-      missions: 3, 
-      total: 5, 
-      online: false,
-      completedMissions: ['Morning Tefillah', 'Torah Study', 'Acts of Kindness'],
-      pendingMissions: ['Camp Activity', 'Evening Reflection']
-    },
-    { 
-      id: 3, 
-      name: 'Michael Rosen', 
-      progress: 100, 
-      missions: 5, 
-      total: 5, 
-      online: true,
-      completedMissions: ['Morning Tefillah', 'Torah Study', 'Acts of Kindness', 'Camp Activity', 'Evening Reflection'],
-      pendingMissions: []
-    },
-    { 
-      id: 4, 
-      name: 'Rachel Green', 
-      progress: 40, 
-      missions: 2, 
-      total: 5, 
-      online: true,
-      completedMissions: ['Morning Tefillah', 'Torah Study'],
-      pendingMissions: ['Acts of Kindness', 'Camp Activity', 'Evening Reflection']
-    },
-    { 
-      id: 5, 
-      name: 'Joshua Miller', 
-      progress: 60, 
-      missions: 3, 
-      total: 5, 
-      online: false,
-      completedMissions: ['Morning Tefillah', 'Acts of Kindness', 'Camp Activity'],
-      pendingMissions: ['Torah Study', 'Evening Reflection']
-    },
-    { 
-      id: 6, 
-      name: 'Hannah Davis', 
-      progress: 80, 
-      missions: 4, 
-      total: 5, 
-      online: true,
-      completedMissions: ['Morning Tefillah', 'Torah Study', 'Acts of Kindness', 'Evening Reflection'],
-      pendingMissions: ['Camp Activity']
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentStaff, setCurrentStaff] = useState<string>('');
+  const [currentBunk, setCurrentBunk] = useState<string>('');
+  const [campers, setCampers] = useState<CamperProgress[]>([]);
+  const hebrewDate = getCurrentHebrewDate();
+
+  useEffect(() => {
+    // Check if staff is already logged in
+    const savedStaff = localStorage.getItem('currentStaff');
+    const savedBunk = localStorage.getItem('staffBunk');
+    if (savedStaff && savedBunk) {
+      setCurrentStaff(savedStaff);
+      setCurrentBunk(savedBunk);
+      setIsAuthenticated(true);
+      loadCamperData(savedBunk);
     }
-  ]);
+  }, []);
 
-  const [selectedCamper, setSelectedCamper] = useState(null);
+  const loadCamperData = (bunkId: string) => {
+    const bunk = CAMP_DATA.find(b => b.id === bunkId);
+    if (!bunk) return;
 
-  const averageProgress = Math.round(campers.reduce((sum, camper) => sum + camper.progress, 0) / campers.length);
+    const missionTitles = DEFAULT_MISSIONS.filter(m => m.isActive).map(m => m.title);
+    const totalMissions = missionTitles.length;
 
-  const handleQuickEdit = (camperId: number, missionName: string, completed: boolean) => {
+    const camperData: CamperProgress[] = bunk.campers.map(camper => {
+      // Load saved progress or generate random data
+      const savedProgress = localStorage.getItem(`camper-progress-${camper.id}`);
+      let completedMissions: string[] = [];
+      let pendingMissions: string[] = missionTitles;
+
+      if (savedProgress) {
+        const { missions } = JSON.parse(savedProgress);
+        if (missions && Array.isArray(missions)) {
+          completedMissions = missions.filter((m: any) => m.completed).map((m: any) => m.title);
+          pendingMissions = missions.filter((m: any) => !m.completed).map((m: any) => m.title);
+        }
+      } else {
+        // Generate random progress for simulation
+        const completedCount = Math.floor(Math.random() * (totalMissions + 1));
+        completedMissions = missionTitles.slice(0, completedCount);
+        pendingMissions = missionTitles.slice(completedCount);
+      }
+
+      return {
+        id: camper.id,
+        name: camper.name,
+        progress: Math.round((completedMissions.length / totalMissions) * 100),
+        missions: completedMissions.length,
+        total: totalMissions,
+        online: Math.random() > 0.3, // 70% chance of being online
+        completedMissions,
+        pendingMissions
+      };
+    });
+
+    setCampers(camperData);
+  };
+
+  const handleStaffLogin = (staffId: string, bunkId: string) => {
+    setCurrentStaff(staffId);
+    setCurrentBunk(bunkId);
+    setIsAuthenticated(true);
+    localStorage.setItem('currentStaff', staffId);
+    localStorage.setItem('staffBunk', bunkId);
+    loadCamperData(bunkId);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentStaff('');
+    setCurrentBunk('');
+    localStorage.removeItem('currentStaff');
+    localStorage.removeItem('staffBunk');
+    navigate('/');
+  };
+
+  const handleBackToHome = () => {
+    setIsAuthenticated(false);
+    setCurrentStaff('');
+    setCurrentBunk('');
+    localStorage.removeItem('currentStaff');
+    localStorage.removeItem('staffBunk');
+  };
+
+  const handleQuickEdit = (camperId: string, missionTitle: string, completed: boolean) => {
+    // Update camper progress in localStorage
+    const savedProgress = localStorage.getItem(`camper-progress-${camperId}`);
+    if (savedProgress) {
+      const progressData = JSON.parse(savedProgress);
+      if (progressData.missions && Array.isArray(progressData.missions)) {
+        const updatedMissions = progressData.missions.map((m: any) => {
+          if (m.title === missionTitle) {
+            return { ...m, completed };
+          }
+          return m;
+        });
+        
+        const newProgressData = {
+          ...progressData,
+          missions: updatedMissions,
+          points: updatedMissions.filter((m: any) => m.completed).length * 5
+        };
+        
+        localStorage.setItem(`camper-progress-${camperId}`, JSON.stringify(newProgressData));
+      }
+    }
+
+    // Update local state
     setCampers(prev => prev.map(camper => {
       if (camper.id === camperId) {
         const updatedCompleted = completed 
-          ? [...camper.completedMissions, missionName]
-          : camper.completedMissions.filter(m => m !== missionName);
+          ? [...camper.completedMissions, missionTitle]
+          : camper.completedMissions.filter(m => m !== missionTitle);
         
         const updatedPending = completed
-          ? camper.pendingMissions.filter(m => m !== missionName)
-          : [...camper.pendingMissions, missionName];
+          ? camper.pendingMissions.filter(m => m !== missionTitle)
+          : [...camper.pendingMissions, missionTitle];
 
         const newProgress = Math.round((updatedCompleted.length / camper.total) * 100);
 
@@ -105,31 +159,39 @@ const StaffDashboard = () => {
 
     toast({
       title: completed ? "Mission Completed! 🎉" : "Mission Unchecked",
-      description: `${missionName} ${completed ? 'marked as complete' : 'marked as incomplete'} for ${campers.find(c => c.id === camperId)?.name}`,
+      description: `${missionTitle} ${completed ? 'marked as complete' : 'marked as incomplete'} for ${campers.find(c => c.id === camperId)?.name}`,
     });
   };
 
-  const handleBulkComplete = () => {
-    toast({
-      title: "Bulk Action",
-      description: "Bulk completion form would open here",
-    });
-  };
+  if (!isAuthenticated) {
+    return <StaffLogin onLogin={handleStaffLogin} onBack={handleBackToHome} />;
+  }
+
+  const bunkInfo = CAMP_DATA.find(b => b.id === currentBunk);
+  const staffInfo = bunkInfo?.staff.find(s => s.id === currentStaff);
+  const averageProgress = campers.length > 0 ? Math.round(campers.reduce((sum, camper) => sum + camper.progress, 0) / campers.length) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <header className="bg-white shadow-sm border-b p-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Staff Dashboard - Bunk Aleph</h1>
-            <p className="text-sm text-green-600">
-              {new Date().toLocaleDateString('he-IL', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                calendar: 'hebrew'
-              })}
-            </p>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="flex items-center space-x-2"
+            >
+              <Home className="h-4 w-4" />
+              <span>Home</span>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {staffInfo?.name} - Bunk {bunkInfo?.displayName}
+              </h1>
+              <p className="text-sm text-green-600">{hebrewDate.hebrew}</p>
+              <p className="text-xs text-gray-600">{hebrewDate.english}</p>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
@@ -139,7 +201,7 @@ const StaffDashboard = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/login')}
+              onClick={handleLogout}
               className="flex items-center space-x-2"
             >
               <LogOut className="h-4 w-4" />
@@ -209,7 +271,7 @@ const StaffDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Button size="sm" className="w-full justify-start" variant="outline" onClick={handleBulkComplete}>
+                <Button size="sm" className="w-full justify-start" variant="outline" onClick={() => toast({ title: "Bulk Actions", description: "Bulk complete form would open here" })}>
                   <Edit3 className="h-4 w-4 mr-2" />
                   Bulk Complete
                 </Button>
@@ -250,7 +312,7 @@ const StaffDashboard = () => {
                       <div className="flex space-x-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="flex-1" onClick={() => setSelectedCamper(camper)}>
+                            <Button size="sm" variant="outline" className="flex-1">
                               <Edit3 className="h-3 w-3 mr-1" />
                               Quick Edit
                             </Button>

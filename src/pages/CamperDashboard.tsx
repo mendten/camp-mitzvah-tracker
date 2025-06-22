@@ -12,19 +12,20 @@ import { useToast } from '@/hooks/use-toast';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
 import { SESSION_CONFIG, DEFAULT_MISSIONS, CAMP_DATA, REQUIRED_MISSIONS_COUNT } from '@/data/campData';
 
+interface CamperMission {
+  id: number;
+  title: string;
+  type: string;
+  completed: boolean;
+  icon: string;
+  isMandatory: boolean;
+}
+
 const CamperDashboard = () => {
   const [selectedBunk, setSelectedBunk] = useState<string>('');
   const [selectedCamper, setSelectedCamper] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<'bunk' | 'camper' | 'dashboard'>('bunk');
-  const [missions, setMissions] = useState(DEFAULT_MISSIONS.filter(m => m.isActive).map(m => ({
-    id: parseInt(m.id.split('_')[1] || '1'),
-    title: m.title,
-    type: m.type,
-    completed: false,
-    icon: m.icon,
-    isMandatory: m.isMandatory
-  })));
-
+  const [missions, setMissions] = useState<CamperMission[]>([]);
   const [streakCount, setStreakCount] = useState(1);
   const [totalPoints, setTotalPoints] = useState(0);
   const [hasSubmittedToday, setHasSubmittedToday] = useState(false);
@@ -34,6 +35,19 @@ const CamperDashboard = () => {
   const { toast } = useToast();
   const hebrewDate = getCurrentHebrewDate();
   const sessionInfo = getSessionInfo(SESSION_CONFIG);
+
+  // Initialize missions from DEFAULT_MISSIONS
+  useEffect(() => {
+    const initialMissions = DEFAULT_MISSIONS.filter(m => m.isActive).map((m, index) => ({
+      id: index + 1,
+      title: m.title,
+      type: m.type,
+      completed: false,
+      icon: m.icon,
+      isMandatory: m.isMandatory
+    }));
+    setMissions(initialMissions);
+  }, []);
 
   // Check if it's past midnight (12am Florida time)
   useEffect(() => {
@@ -55,7 +69,9 @@ const CamperDashboard = () => {
       const savedProgress = localStorage.getItem(`camper-progress-${selectedCamper}`);
       if (savedProgress) {
         const { missions: savedMissions, streak, points, submitted } = JSON.parse(savedProgress);
-        setMissions(savedMissions || missions);
+        if (savedMissions && Array.isArray(savedMissions)) {
+          setMissions(savedMissions);
+        }
         setStreakCount(streak || 1);
         setTotalPoints(points || 0);
         setHasSubmittedToday(submitted || false);
@@ -66,7 +82,7 @@ const CamperDashboard = () => {
 
   // Save progress to localStorage whenever missions change
   useEffect(() => {
-    if (selectedCamper) {
+    if (selectedCamper && missions.length > 0) {
       const progressData = {
         missions,
         streak: streakCount,
@@ -81,12 +97,12 @@ const CamperDashboard = () => {
   }, [missions, streakCount, totalPoints, hasSubmittedToday, selectedCamper, selectedBunk]);
 
   const completedCount = missions.filter(m => m.completed).length;
-  const progressPercentage = (completedCount / missions.length) * 100;
+  const progressPercentage = missions.length > 0 ? (completedCount / missions.length) * 100 : 0;
   const mandatoryMissions = missions.filter(m => m.isMandatory);
   const completedMandatory = mandatoryMissions.filter(m => m.completed).length;
   const isQualified = completedCount >= REQUIRED_MISSIONS_COUNT;
 
-  const toggleMission = (id: number) => {
+  const toggleMission = (missionId: number) => {
     if (hasSubmittedToday && canSubmitToday) {
       toast({
         title: "Already Submitted Today",
@@ -105,13 +121,13 @@ const CamperDashboard = () => {
       return;
     }
 
-    setMissions(prev => prev.map(mission => {
-      if (mission.id === id) {
+    setMissions(prevMissions => prevMissions.map(mission => {
+      if (mission.id === missionId) {
         const newCompleted = !mission.completed;
         if (newCompleted) {
           setTotalPoints(prev => prev + 5);
           
-          const newCompletedCount = missions.filter(m => m.completed).length + 1;
+          const newCompletedCount = prevMissions.filter(m => m.completed).length + 1;
           if (newCompletedCount === missions.length) {
             toast({
               title: "🎉 ALL MISSIONS COMPLETE! 🎉",
