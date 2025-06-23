@@ -77,20 +77,12 @@ const AdminSubmissionsManagement = () => {
   };
 
   const handleReject = (submissionId: string) => {
-    // For now, we'll just mark as rejected in the status
-    const allSubmissions = MasterData.getAllSubmissions();
-    const submission = allSubmissions.find(s => s.id === submissionId);
-    if (submission) {
-      submission.status = 'rejected';
-      submission.rejectedAt = new Date().toISOString();
-      submission.rejectedBy = 'Admin';
-      MasterData.saveAllSubmissions(allSubmissions);
-      setRefreshKey(prev => prev + 1);
-      toast({
-        title: "Submission Rejected",
-        description: "The submission has been rejected.",
-      });
-    }
+    MasterData.rejectSubmission(submissionId, 'Admin');
+    setRefreshKey(prev => prev + 1);
+    toast({
+      title: "Submission Rejected",
+      description: "The submission has been rejected.",
+    });
   };
 
   const getMissionTitles = (missionIds: string[]) => {
@@ -103,8 +95,8 @@ const AdminSubmissionsManagement = () => {
   const exportSubmissions = () => {
     const csvData = filteredSubmissions.map(sub => ({
       'Submission ID': sub.id,
-      'Camper Name': sub.camperName,
       'Camper Code': sub.camperCode,
+      'Camper Name': sub.camperName,
       'Bunk': sub.bunkName,
       'Date': sub.date,
       'Status': sub.status,
@@ -205,12 +197,12 @@ const AdminSubmissionsManagement = () => {
             <div className="grid gap-2">
               {/* Header Row */}
               <div className="grid grid-cols-8 gap-4 p-3 bg-gray-100 rounded-lg font-semibold text-sm">
-                <div>Camper</div>
+                <div>Camper Code</div>
+                <div>Name</div>
                 <div>Bunk</div>
                 <div>Date</div>
                 <div>Status</div>
                 <div>Missions</div>
-                <div>Submitted</div>
                 <div>Edit Reason</div>
                 <div>Actions</div>
               </div>
@@ -218,10 +210,8 @@ const AdminSubmissionsManagement = () => {
               {/* Data Rows */}
               {filteredSubmissions.map((submission) => (
                 <div key={submission.id} className="grid grid-cols-8 gap-4 p-3 border rounded-lg hover:bg-gray-50 text-sm">
-                  <div>
-                    <div className="font-medium">{submission.camperName}</div>
-                    <div className="text-gray-500">{submission.camperCode}</div>
-                  </div>
+                  <div className="font-medium text-blue-600">{submission.camperCode}</div>
+                  <div className="font-medium">{submission.camperName}</div>
                   <div>{submission.bunkName}</div>
                   <div>{new Date(submission.date).toLocaleDateString()}</div>
                   <div>{getStatusBadge(submission.status)}</div>
@@ -231,7 +221,6 @@ const AdminSubmissionsManagement = () => {
                       {getMissionTitles(submission.missions)}
                     </div>
                   </div>
-                  <div>{new Date(submission.submittedAt).toLocaleDateString()}</div>
                   <div className="text-gray-500 truncate max-w-32" title={submission.editRequestReason}>
                     {submission.editRequestReason || '-'}
                   </div>
