@@ -25,7 +25,7 @@ const StaffDashboard = () => {
   const [showCamperDetails, setShowCamperDetails] = useState(false);
   const [selectedCamperForDetails, setSelectedCamperForDetails] = useState<any>(null);
   const hebrewDate = getCurrentHebrewDate();
-  const sessionInfo = getSessionInfo({ currentSession: 1, currentWeek: 3, currentDay: 4 });
+  const sessionInfo = getSessionInfo();
 
   useEffect(() => {
     // Check if staff is already logged in

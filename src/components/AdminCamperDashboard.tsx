@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Clock, Download, Search, Filter, Settings, Calendar } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Download, Search, Filter, Settings, Calendar, AlertTriangle } from 'lucide-react';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import { getCamperCode } from '@/utils/camperCodes';
 import CamperEditDialog from './CamperEditDialog';
@@ -38,6 +38,26 @@ const AdminCamperDashboard = () => {
       title: "Settings Updated",
       description: `Daily required missions set to ${value}`,
     });
+  };
+
+  const getBunkPerformance = (bunkId: string) => {
+    const bunk = CAMP_DATA.find(b => b.id === bunkId);
+    if (!bunk) return { percentage: 0, status: 'needs-attention' };
+    
+    const qualifiedCampers = bunk.campers.filter(camper => {
+      const stats = getCamperStats(camper.id);
+      return stats.todayQualified;
+    }).length;
+    
+    const percentage = bunk.campers.length > 0 ? Math.round((qualifiedCampers / bunk.campers.length) * 100) : 0;
+    
+    let status: string;
+    if (percentage >= 90) status = 'excellent';
+    else if (percentage >= 75) status = 'good';
+    else if (percentage >= 50) status = 'average';
+    else status = 'needs-attention';
+    
+    return { percentage, status };
   };
 
   // Get all campers from all bunks with their codes
