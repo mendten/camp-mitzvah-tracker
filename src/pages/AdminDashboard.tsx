@@ -13,9 +13,10 @@ import CamperEditDialog from '@/components/CamperEditDialog';
 import CamperDetailsModal from '@/components/CamperDetailsModal';
 import EnhancedCalendar from '@/components/EnhancedCalendar';
 import AdminCamperDashboard from '@/components/AdminCamperDashboard';
+import AdminSubmissionsManagement from '@/components/AdminSubmissionsManagement';
 import SessionManagement from '@/components/SessionManagement';
 import MissionAnalytics from '@/components/MissionAnalytics';
-import { getCurrentHebrewDate } from '@/utils/hebrewDate';
+import { getCurrentHebrewDate } from '@/utils/hebrewCalendar';
 import MissionRequirementDialog from '@/components/MissionRequirementDialog';
 import { downloadFullReport, importData } from '@/utils/dataExport';
 
@@ -590,7 +591,7 @@ const AdminDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <AdminCamperDashboard />
+                <AdminSubmissionsManagement />
               </CardContent>
             </Card>
           </TabsContent>
