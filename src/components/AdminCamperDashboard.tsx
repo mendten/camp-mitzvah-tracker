@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, AlertTriangle, Download, Search, Filter, Settings } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Download, Search, Filter, Settings, Calendar } from 'lucide-react';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import { getCamperCode } from '@/utils/camperCodes';
 import CamperEditDialog from './CamperEditDialog';
 import StaffManagement from './StaffManagement';
 import PublicDashboard from './PublicDashboard';
+import SessionCalendarSetup from './SessionCalendarSetup';
 import { useToast } from '@/hooks/use-toast';
 
 const AdminCamperDashboard = () => {
@@ -42,48 +42,67 @@ const AdminCamperDashboard = () => {
 
   // Get all campers from all bunks with their codes
   const getAllCampers = () => {
-    return CAMP_DATA.flatMap(bunk => 
-      bunk.campers.map(camper => ({
-        ...camper,
-        bunk: bunk.displayName,
-        bunkId: bunk.id,
-        code: getCamperCode(camper.id)
-      }))
+    console.log('Getting all campers from CAMP_DATA:', CAMP_DATA);
+    const allCampers = CAMP_DATA.flatMap(bunk => 
+      bunk.campers.map(camper => {
+        console.log('Processing camper:', camper.name, 'from bunk:', bunk.displayName);
+        return {
+          ...camper,
+          bunk: bunk.displayName,
+          bunkId: bunk.id,
+          code: getCamperCode(camper.id)
+        };
+      })
     );
+    console.log('Total campers found:', allCampers.length);
+    return allCampers;
   };
 
   const getCamperStats = (camperId: string) => {
-    const progress = localStorage.getItem(`camper_${camperId}_missions`);
-    const submitted = localStorage.getItem(`camper_${camperId}_submitted`);
-    const approved = localStorage.getItem(`camper_${camperId}_approved`);
+    const today = new Date().toDateString();
     
-    const completedMissions = progress ? JSON.parse(progress) : [];
-    const submittedMissions = submitted ? JSON.parse(submitted) : [];
-    const approvedMissions = approved ? JSON.parse(approved) : [];
+    // Check today's submission
+    const todaySubmission = localStorage.getItem(`camper_${camperId}_submission_${today}`);
+    const approved = localStorage.getItem(`camper_${camperId}_approved_${today}`);
+    const editRequested = localStorage.getItem(`camper_${camperId}_edit_requested_${today}`);
+    
+    let todayStatus = 'not_submitted';
+    let submittedMissions = 0;
+    
+    if (approved) {
+      todayStatus = 'approved';
+      const approvedData = JSON.parse(approved);
+      submittedMissions = approvedData.missions ? approvedData.missions.length : 0;
+    } else if (editRequested) {
+      todayStatus = 'edit_requested';
+      const editData = JSON.parse(editRequested);
+      submittedMissions = editData.currentMissions ? editData.currentMissions.length : 0;
+    } else if (todaySubmission) {
+      todayStatus = 'pending';
+      const submissionData = JSON.parse(todaySubmission);
+      submittedMissions = submissionData.missions ? submissionData.missions.length : 0;
+    }
     
     const activeMissions = DEFAULT_MISSIONS.filter(m => m.isActive);
     const mandatoryMissions = activeMissions.filter(m => m.isMandatory);
     
-    const completedMandatory = mandatoryMissions.filter(m => 
-      approvedMissions.includes(m.id)
-    ).length;
+    const todayQualified = submittedMissions >= dailyRequired && (todayStatus === 'approved' || todayStatus === 'pending');
     
-    const todayQualified = approvedMissions.length >= dailyRequired;
-    const weekTotal = approvedMissions.length;
-    const sessionTotal = approvedMissions.length;
+    // Get history for total counts
+    const history = JSON.parse(localStorage.getItem(`camper_${camperId}_history`) || '[]');
+    const weekTotal = history.filter((h: any) => h.status === 'approved').length;
+    const sessionTotal = weekTotal; // For now, same as week total
     
     return {
-      completedMissions: completedMissions.length,
-      submittedMissions: submittedMissions.length,
-      approvedMissions: approvedMissions.length,
+      todayStatus,
+      submittedMissions,
       totalMissions: activeMissions.length,
-      mandatoryCompleted: completedMandatory,
       mandatoryTotal: mandatoryMissions.length,
       todayQualified,
       weekTotal,
       sessionTotal,
       dailyRequired,
-      progressPercentage: Math.round((approvedMissions.length / activeMissions.length) * 100)
+      progressPercentage: activeMissions.length > 0 ? Math.round((submittedMissions / activeMissions.length) * 100) : 0
     };
   };
 
@@ -98,10 +117,10 @@ const AdminCamperDashboard = () => {
     if (filterStatus === 'all') return true;
     
     const stats = getCamperStats(camper.id);
-    if (filterStatus === 'qualified') return stats.todayQualified;
-    if (filterStatus === 'unqualified') return !stats.todayQualified;
-    if (filterStatus === 'complete') return stats.progressPercentage === 100;
-    if (filterStatus === 'incomplete') return stats.progressPercentage < 100;
+    if (filterStatus === 'approved') return stats.todayStatus === 'approved';
+    if (filterStatus === 'pending') return stats.todayStatus === 'pending';
+    if (filterStatus === 'not_submitted') return stats.todayStatus === 'not_submitted';
+    if (filterStatus === 'edit_requested') return stats.todayStatus === 'edit_requested';
     
     return true;
   });
@@ -116,19 +135,32 @@ const AdminCamperDashboard = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleMissionToggle = (camperId: string, missionId: string) => {
-    const approved = JSON.parse(localStorage.getItem(`camper_${camperId}_approved`) || '[]');
-    const newApproved = approved.includes(missionId) 
-      ? approved.filter((id: string) => id !== missionId)
-      : [...approved, missionId];
+  const handleApproveSubmission = (camperId: string) => {
+    const today = new Date().toDateString();
+    const submission = localStorage.getItem(`camper_${camperId}_submission_${today}`);
     
-    localStorage.setItem(`camper_${camperId}_approved`, JSON.stringify(newApproved));
-    setRefreshKey(prev => prev + 1);
-    
-    toast({
-      title: newApproved.includes(missionId) ? "Mission Approved" : "Mission Unapproved",
-      description: `Mission ${newApproved.includes(missionId) ? 'approved' : 'unapproved'} for camper`,
-    });
+    if (submission) {
+      const submissionData = JSON.parse(submission);
+      submissionData.status = 'approved';
+      
+      // Save as approved
+      localStorage.setItem(`camper_${camperId}_approved_${today}`, JSON.stringify(submissionData));
+      
+      // Update history
+      const history = JSON.parse(localStorage.getItem(`camper_${camperId}_history`) || '[]');
+      const historyIndex = history.findIndex((h: any) => h.date === today);
+      if (historyIndex >= 0) {
+        history[historyIndex].status = 'approved';
+        localStorage.setItem(`camper_${camperId}_history`, JSON.stringify(history));
+      }
+      
+      setRefreshKey(prev => prev + 1);
+      
+      toast({
+        title: "Submission Approved",
+        description: "Camper's daily submission has been approved",
+      });
+    }
   };
 
   const exportAllData = () => {
@@ -139,11 +171,11 @@ const AdminCamperDashboard = () => {
         Code: camper.code,
         ID: camper.id,
         Bunk: camper.bunk,
+        'Today Status': stats.todayStatus,
         'Today Qualified': stats.todayQualified ? 'Yes' : 'No',
+        'Submitted Today': stats.submittedMissions,
         'Week Total': stats.weekTotal,
         'Session Total': stats.sessionTotal,
-        'Approved Missions': stats.approvedMissions,
-        'Mandatory Completed': `${stats.mandatoryCompleted}/${stats.mandatoryTotal}`,
         'Progress %': stats.progressPercentage
       };
     });
@@ -163,19 +195,37 @@ const AdminCamperDashboard = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const getBunkPerformance = (bunkId: string) => {
-    const bunk = CAMP_DATA.find(b => b.id === bunkId);
-    if (!bunk) return { status: 'unknown', percentage: 0 };
-    
-    const camperStats = bunk.campers.map(camper => getCamperStats(camper.id));
-    const qualifiedCount = camperStats.filter(stats => stats.todayQualified).length;
-    const percentage = Math.round((qualifiedCount / bunk.campers.length) * 100);
-    
-    if (percentage >= 90) return { status: 'excellent', percentage };
-    if (percentage >= 75) return { status: 'good', percentage };
-    if (percentage >= 50) return { status: 'average', percentage };
-    return { status: 'needs-attention', percentage };
+  const getStatusColor = (status: string, qualified: boolean) => {
+    switch (status) {
+      case 'approved':
+        return 'border-green-500 bg-green-50';
+      case 'pending':
+        return 'border-yellow-500 bg-yellow-50';
+      case 'edit_requested':
+        return 'border-blue-500 bg-blue-50';
+      case 'not_submitted':
+        return qualified ? 'border-gray-300 bg-gray-50' : 'border-red-300 bg-red-50';
+      default:
+        return 'border-gray-300 bg-white';
+    }
   };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <CheckCircle2 className="h-6 w-6 text-green-600" />;
+      case 'pending':
+        return <Clock className="h-6 w-6 text-yellow-600" />;
+      case 'edit_requested':
+        return <Clock className="h-6 w-6 text-blue-600" />;
+      case 'not_submitted':
+        return <XCircle className="h-6 w-6 text-red-600" />;
+      default:
+        return <XCircle className="h-6 w-6 text-gray-400" />;
+    }
+  };
+
+  console.log('Rendering with filtered campers:', filteredCampers.length);
 
   return (
     <div className="space-y-6" key={refreshKey}>
@@ -209,9 +259,10 @@ const AdminCamperDashboard = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all-campers" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="all-campers">All Campers ({getAllCampers().length})</TabsTrigger>
               <TabsTrigger value="by-bunks">By Bunks</TabsTrigger>
+              <TabsTrigger value="sessions">Sessions</TabsTrigger>
               <TabsTrigger value="staff-management">Staff</TabsTrigger>
               <TabsTrigger value="public-dashboard">Dashboard</TabsTrigger>
             </TabsList>
@@ -246,10 +297,10 @@ const AdminCamperDashboard = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="qualified">Today Qualified</SelectItem>
-                      <SelectItem value="unqualified">Not Qualified</SelectItem>
-                      <SelectItem value="complete">100% Complete</SelectItem>
-                      <SelectItem value="incomplete">Incomplete</SelectItem>
+                      <SelectItem value="approved">Approved (Green)</SelectItem>
+                      <SelectItem value="pending">Pending (Yellow)</SelectItem>
+                      <SelectItem value="edit_requested">Edit Requested (Blue)</SelectItem>
+                      <SelectItem value="not_submitted">Not Submitted (Red)</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="text-sm text-gray-600 flex items-center">
@@ -258,14 +309,38 @@ const AdminCamperDashboard = () => {
                   </div>
                 </div>
 
+                {/* Status Legend */}
+                <Card className="border-2 border-gray-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-center space-x-6 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-green-500 rounded"></div>
+                        <span>Approved</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                        <span>Pending Approval</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                        <span>Edit Requested</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-red-500 rounded"></div>
+                        <span>Not Submitted</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Campers Grid */}
                 <div className="grid gap-4">
                   {filteredCampers.map(camper => {
                     const stats = getCamperStats(camper.id);
                     return (
-                      <Card key={camper.id} className="border-2 hover:shadow-lg transition-all">
+                      <Card key={camper.id} className={`border-2 hover:shadow-lg transition-all ${getStatusColor(stats.todayStatus, stats.todayQualified)}`}>
                         <CardContent className="p-4">
-                          <div className="grid md:grid-cols-9 gap-4 items-center">
+                          <div className="grid md:grid-cols-8 gap-4 items-center">
                             <div className="md:col-span-2">
                               <h3 className="font-semibold text-lg">{camper.name}</h3>
                               <p className="text-sm text-gray-600">Code: {camper.code}</p>
@@ -273,27 +348,18 @@ const AdminCamperDashboard = () => {
                             </div>
                             
                             <div className="text-center">
-                              <div className={`text-lg font-bold ${stats.todayQualified ? 'text-green-600' : 'text-red-600'}`}>
-                                {stats.todayQualified ? <CheckCircle2 className="h-6 w-6 mx-auto" /> : <XCircle className="h-6 w-6 mx-auto" />}
-                              </div>
-                              <p className="text-xs text-gray-600">Qualified</p>
+                              {getStatusIcon(stats.todayStatus)}
+                              <p className="text-xs text-gray-600 mt-1">Status</p>
                             </div>
                             
                             <div className="text-center">
-                              <div className="text-lg font-bold text-blue-600">{stats.approvedMissions}</div>
-                              <p className="text-xs text-gray-600">Approved</p>
+                              <div className="text-lg font-bold text-blue-600">{stats.submittedMissions}</div>
+                              <p className="text-xs text-gray-600">Today</p>
                             </div>
                             
                             <div className="text-center">
-                              <div className="text-lg font-bold text-purple-600">{stats.submittedMissions}</div>
-                              <p className="text-xs text-gray-600">Submitted</p>
-                            </div>
-                            
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-green-600">
-                                {stats.mandatoryCompleted}/{stats.mandatoryTotal}
-                              </div>
-                              <p className="text-xs text-gray-600">Mandatory</p>
+                              <div className="text-lg font-bold text-purple-600">{stats.weekTotal}</div>
+                              <p className="text-xs text-gray-600">Week</p>
                             </div>
                             
                             <div className="text-center">
@@ -308,22 +374,24 @@ const AdminCamperDashboard = () => {
                             </div>
                             
                             <div className="text-center">
-                              <div className="flex flex-col space-y-1">
-                                {DEFAULT_MISSIONS.filter(m => m.isActive).slice(0, 3).map(mission => {
-                                  const isApproved = JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]').includes(mission.id);
-                                  return (
-                                    <Button
-                                      key={mission.id}
-                                      size="sm"
-                                      variant={isApproved ? "default" : "outline"}
-                                      onClick={() => handleMissionToggle(camper.id, mission.id)}
-                                      className="text-xs px-2 py-1"
-                                    >
-                                      {mission.title.slice(0, 10)}...
-                                    </Button>
-                                  );
-                                })}
-                              </div>
+                              {stats.todayStatus === 'pending' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApproveSubmission(camper.id)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  Approve
+                                </Button>
+                              )}
+                              {stats.todayStatus === 'approved' && (
+                                <span className="text-green-600 font-semibold">✓ Approved</span>
+                              )}
+                              {stats.todayStatus === 'edit_requested' && (
+                                <span className="text-blue-600 font-semibold">Edit Request</span>
+                              )}
+                              {stats.todayStatus === 'not_submitted' && (
+                                <span className="text-red-600 font-semibold">Not Submitted</span>
+                              )}
                             </div>
                             
                             <div className="text-center">
@@ -391,6 +459,10 @@ const AdminCamperDashboard = () => {
                   })}
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="sessions">
+              <SessionCalendarSetup />
             </TabsContent>
 
             <TabsContent value="staff-management">
