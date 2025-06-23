@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, Clock, Download, Search, Filter, Settings, Calendar, AlertTriangle } from 'lucide-react';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import { getCamperCode } from '@/utils/camperCodes';
+import { DataStorage } from '@/utils/dataStorage';
 import CamperEditDialog from './CamperEditDialog';
 import StaffManagement from './StaffManagement';
 import PublicDashboard from './PublicDashboard';
@@ -45,8 +46,8 @@ const AdminCamperDashboard = () => {
     if (!bunk) return { percentage: 0, status: 'needs-attention' };
     
     const qualifiedCampers = bunk.campers.filter(camper => {
-      const stats = getCamperStats(camper.id);
-      return stats.todayQualified;
+      const status = DataStorage.getCamperTodayStatus(camper.id);
+      return status.qualified && (status.status === 'approved' || status.status === 'pending');
     }).length;
     
     const percentage = bunk.campers.length > 0 ? Math.round((qualifiedCampers / bunk.campers.length) * 100) : 0;
@@ -60,17 +61,21 @@ const AdminCamperDashboard = () => {
     return { percentage, status };
   };
 
-  // Get all campers from all bunks with their codes
+  // Get all campers from all bunks with their codes and proper status
   const getAllCampers = () => {
     console.log('Getting all campers from CAMP_DATA:', CAMP_DATA);
     const allCampers = CAMP_DATA.flatMap(bunk => 
       bunk.campers.map(camper => {
         console.log('Processing camper:', camper.name, 'from bunk:', bunk.displayName);
+        const camperStatus = DataStorage.getCamperTodayStatus(camper.id);
         return {
           ...camper,
           bunk: bunk.displayName,
           bunkId: bunk.id,
-          code: getCamperCode(camper.id)
+          code: getCamperCode(camper.id),
+          todayStatus: camperStatus.status,
+          qualified: camperStatus.qualified,
+          submittedCount: camperStatus.submittedCount
         };
       })
     );
@@ -79,50 +84,23 @@ const AdminCamperDashboard = () => {
   };
 
   const getCamperStats = (camperId: string) => {
-    const today = new Date().toDateString();
-    
-    // Check today's submission
-    const todaySubmission = localStorage.getItem(`camper_${camperId}_submission_${today}`);
-    const approved = localStorage.getItem(`camper_${camperId}_approved_${today}`);
-    const editRequested = localStorage.getItem(`camper_${camperId}_edit_requested_${today}`);
-    
-    let todayStatus = 'not_submitted';
-    let submittedMissions = 0;
-    
-    if (approved) {
-      todayStatus = 'approved';
-      const approvedData = JSON.parse(approved);
-      submittedMissions = approvedData.missions ? approvedData.missions.length : 0;
-    } else if (editRequested) {
-      todayStatus = 'edit_requested';
-      const editData = JSON.parse(editRequested);
-      submittedMissions = editData.currentMissions ? editData.currentMissions.length : 0;
-    } else if (todaySubmission) {
-      todayStatus = 'pending';
-      const submissionData = JSON.parse(todaySubmission);
-      submittedMissions = submissionData.missions ? submissionData.missions.length : 0;
-    }
-    
+    const todayStatus = DataStorage.getCamperTodayStatus(camperId);
     const activeMissions = DEFAULT_MISSIONS.filter(m => m.isActive);
-    const mandatoryMissions = activeMissions.filter(m => m.isMandatory);
+    const history = DataStorage.getSubmissionHistory(camperId);
+    const approvedCount = history.filter(h => h.status === 'approved').length;
     
-    const todayQualified = submittedMissions >= dailyRequired && (todayStatus === 'approved' || todayStatus === 'pending');
-    
-    // Get history for total counts
-    const history = JSON.parse(localStorage.getItem(`camper_${camperId}_history`) || '[]');
-    const weekTotal = history.filter((h: any) => h.status === 'approved').length;
-    const sessionTotal = weekTotal; // For now, same as week total
+    const progressPercentage = activeMissions.length > 0 ? 
+      Math.round((todayStatus.submittedCount / activeMissions.length) * 100) : 0;
     
     return {
-      todayStatus,
-      submittedMissions,
+      todayStatus: todayStatus.status,
+      submittedMissions: todayStatus.submittedCount,
       totalMissions: activeMissions.length,
-      mandatoryTotal: mandatoryMissions.length,
-      todayQualified,
-      weekTotal,
-      sessionTotal,
-      dailyRequired,
-      progressPercentage: activeMissions.length > 0 ? Math.round((submittedMissions / activeMissions.length) * 100) : 0
+      todayQualified: todayStatus.qualified,
+      weekTotal: approvedCount, // For now, same as total approved
+      sessionTotal: approvedCount,
+      dailyRequired: DataStorage.getDailyRequired(),
+      progressPercentage
     };
   };
 
@@ -136,11 +114,10 @@ const AdminCamperDashboard = () => {
     
     if (filterStatus === 'all') return true;
     
-    const stats = getCamperStats(camper.id);
-    if (filterStatus === 'approved') return stats.todayStatus === 'approved';
-    if (filterStatus === 'pending') return stats.todayStatus === 'pending';
-    if (filterStatus === 'not_submitted') return stats.todayStatus === 'not_submitted';
-    if (filterStatus === 'edit_requested') return stats.todayStatus === 'edit_requested';
+    if (filterStatus === 'approved') return camper.todayStatus === 'approved';
+    if (filterStatus === 'pending') return camper.todayStatus === 'pending';
+    if (filterStatus === 'not_submitted') return camper.todayStatus === 'not_submitted';
+    if (filterStatus === 'edit_requested') return camper.todayStatus === 'edit_requested';
     
     return true;
   });
@@ -156,31 +133,13 @@ const AdminCamperDashboard = () => {
   };
 
   const handleApproveSubmission = (camperId: string) => {
-    const today = new Date().toDateString();
-    const submission = localStorage.getItem(`camper_${camperId}_submission_${today}`);
+    DataStorage.approveSubmission(camperId);
+    setRefreshKey(prev => prev + 1);
     
-    if (submission) {
-      const submissionData = JSON.parse(submission);
-      submissionData.status = 'approved';
-      
-      // Save as approved
-      localStorage.setItem(`camper_${camperId}_approved_${today}`, JSON.stringify(submissionData));
-      
-      // Update history
-      const history = JSON.parse(localStorage.getItem(`camper_${camperId}_history`) || '[]');
-      const historyIndex = history.findIndex((h: any) => h.date === today);
-      if (historyIndex >= 0) {
-        history[historyIndex].status = 'approved';
-        localStorage.setItem(`camper_${camperId}_history`, JSON.stringify(history));
-      }
-      
-      setRefreshKey(prev => prev + 1);
-      
-      toast({
-        title: "Submission Approved",
-        description: "Camper's daily submission has been approved",
-      });
-    }
+    toast({
+      title: "Submission Approved",
+      description: "Camper's daily submission has been approved",
+    });
   };
 
   const exportAllData = () => {
@@ -210,7 +169,7 @@ const AdminCamperDashboard = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `camp-data-export.csv`;
+    a.download = `camp-data-export-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -387,7 +346,7 @@ const AdminCamperDashboard = () => {
                               <p className="text-xs text-gray-600">Progress</p>
                               <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
                                 <div 
-                                  className="bg-orange-500 h-2 rounded-full"
+                                  className="bg-orange-500 h-2 rounded-full transition-all duration-300"
                                   style={{ width: `${stats.progressPercentage}%` }}
                                 ></div>
                               </div>

@@ -23,21 +23,17 @@ const HEBREW_DAYS = ['יום ראשון', 'יום שני', 'יום שלישי', 
 export function getCurrentHebrewDate(): HebrewDate {
   const now = new Date();
   
-  // Proper Hebrew calendar calculation (simplified for camp period)
-  // This is a basic approximation - for precise Hebrew dates, use a proper Hebrew calendar library
-  const gregorianYear = now.getFullYear();
-  const hebrewYear = gregorianYear + 3760; // Basic conversion
-  
+  // Summer camp period mapping (June-August to Hebrew months)
   const month = now.getMonth() + 1;
   const day = now.getDate();
   
   let hebrewMonth: string;
   let hebrewDay: number;
   
-  // Summer camp period mapping (June-August to Hebrew months)
+  // Map Gregorian summer months to Hebrew months
   if (month === 6) {
     hebrewMonth = 'סיון';
-    hebrewDay = day;
+    hebrewDay = day + 15; // Approximate offset for camp period
   } else if (month === 7) {
     hebrewMonth = 'תמוז';
     hebrewDay = day;
@@ -49,7 +45,7 @@ export function getCurrentHebrewDate(): HebrewDate {
     hebrewDay = day;
   } else {
     // Default for other months
-    hebrewMonth = HEBREW_MONTHS[month - 1] || 'אב';
+    hebrewMonth = 'תמוז'; // Default to Tammuz for camp period
     hebrewDay = day;
   }
   
@@ -79,7 +75,7 @@ export function getHebrewDateForDate(date: Date): HebrewDate {
   
   if (month === 6) {
     hebrewMonth = 'סיון';
-    hebrewDay = day;
+    hebrewDay = day + 15;
   } else if (month === 7) {
     hebrewMonth = 'תמוז';
     hebrewDay = day;
@@ -90,7 +86,7 @@ export function getHebrewDateForDate(date: Date): HebrewDate {
     hebrewMonth = 'אלול';
     hebrewDay = day;
   } else {
-    hebrewMonth = HEBREW_MONTHS[month - 1] || 'אב';
+    hebrewMonth = 'תמוז';
     hebrewDay = day;
   }
   
@@ -110,24 +106,31 @@ export function getHebrewDateForDate(date: Date): HebrewDate {
 }
 
 export function getSessionInfo() {
-  const currentSession = parseInt(localStorage.getItem('current_session') || '0');
-  const sessionStartDate = localStorage.getItem('session_start_date');
+  const { session, startDate } = getCurrentSessionData();
   
-  if (currentSession === 0) {
+  if (session === 0) {
     return {
       hebrew: 'טרם החל המחנה',
       english: 'Pre-Camp Session 0'
     };
   }
   
-  const startDate = sessionStartDate ? new Date(sessionStartDate) : new Date();
-  const daysSinceStart = Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (!startDate) {
+    return {
+      hebrew: `מפגש ${session} - לא מוגדר`,
+      english: `Session ${session} - Not Configured`
+    };
+  }
+  
+  const start = new Date(startDate);
+  const now = new Date();
+  const daysSinceStart = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
   const currentWeek = Math.floor(daysSinceStart / 7) + 1;
   const currentDay = (daysSinceStart % 7) + 1;
   
   return {
-    hebrew: `מפגש ${currentSession}, שבוע ${currentWeek}, יום ${currentDay}`,
-    english: `Session ${currentSession}, Week ${currentWeek}, Day ${currentDay}`
+    hebrew: `מפגש ${session}, שבוע ${currentWeek}, יום ${currentDay}`,
+    english: `Session ${session}, Week ${currentWeek}, Day ${currentDay}`
   };
 }
 
@@ -140,7 +143,7 @@ export function formatHebrewDate(date: Date): string {
   
   if (month === 6) {
     hebrewMonth = 'סיון';
-    hebrewDay = day;
+    hebrewDay = day + 15;
   } else if (month === 7) {
     hebrewMonth = 'תמוז';
     hebrewDay = day;
@@ -151,7 +154,7 @@ export function formatHebrewDate(date: Date): string {
     hebrewMonth = 'אלול';
     hebrewDay = day;
   } else {
-    hebrewMonth = HEBREW_MONTHS[month - 1] || 'אב';
+    hebrewMonth = 'תמוז';
     hebrewDay = day;
   }
   
@@ -159,4 +162,11 @@ export function formatHebrewDate(date: Date): string {
   
   const hebrewDayStr = HEBREW_NUMBERS[hebrewDay] || hebrewDay.toString();
   return `${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
+}
+
+// Helper function to get current session data
+function getCurrentSessionData(): { session: number; startDate: string | null } {
+  const session = parseInt(localStorage.getItem('current_session') || '0');
+  const startDate = localStorage.getItem('session_start_date');
+  return { session, startDate };
 }

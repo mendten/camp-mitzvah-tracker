@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import MissionCard from '@/components/MissionCard';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
+import { DataStorage } from '@/utils/dataStorage';
 import CamperCalendar from '@/components/CamperCalendar';
 
 const CamperDashboard = () => {
@@ -37,31 +38,23 @@ const CamperDashboard = () => {
         setSelectedBunk(bunk);
         setSelectedCamper(camper);
         
-        // Load completed missions for this camper
-        const savedProgress = localStorage.getItem(`camper_${camperId}_missions`);
-        if (savedProgress) {
-          setCompletedMissions(new Set(JSON.parse(savedProgress)));
-        }
+        // Load today's missions using new data system
+        const todayMissions = DataStorage.getCamperTodayMissions(camperId);
+        setCompletedMissions(new Set(todayMissions));
         
-        // Check submission status for today
-        const today = new Date().toDateString();
-        const todaySubmission = localStorage.getItem(`camper_${camperId}_submission_${today}`);
-        const editRequested = localStorage.getItem(`camper_${camperId}_edit_requested_${today}`);
-        const approved = localStorage.getItem(`camper_${camperId}_approved_${today}`);
+        // Check submission status using new data system
+        const todayStatus = DataStorage.getCamperTodayStatus(camperId);
+        const submission = DataStorage.getCamperTodaySubmission(camperId);
         
-        if (approved) {
-          setSubmissionStatus('approved');
-        } else if (editRequested) {
-          setSubmissionStatus('edit_requested');
-        } else if (todaySubmission) {
-          setSubmissionStatus('submitted');
+        if (submission) {
+          setSubmissionStatus(submission.status === 'pending' ? 'submitted' : submission.status);
         } else {
           setSubmissionStatus('none');
         }
         
         // Load submission history
-        const history = localStorage.getItem(`camper_${camperId}_history`) || '[]';
-        setSubmissionHistory(JSON.parse(history));
+        const history = DataStorage.getSubmissionHistory(camperId);
+        setSubmissionHistory(history);
       } else {
         navigate('/');
       }
@@ -90,30 +83,22 @@ const CamperDashboard = () => {
     }
     
     setCompletedMissions(newCompleted);
-    localStorage.setItem(`camper_${selectedCamper.id}_missions`, JSON.stringify([...newCompleted]));
+    // Save using new data system
+    DataStorage.setCamperTodayMissions(selectedCamper.id, [...newCompleted]);
   };
 
   const handleBulkSubmit = () => {
     if (!selectedCamper) return;
     
-    const today = new Date().toDateString();
-    const submissionData = {
-      date: today,
-      missions: [...completedMissions],
-      submittedAt: new Date().toISOString(),
-      status: 'pending'
-    };
+    // Submit all missions using new data system
+    DataStorage.submitCamperMissions(selectedCamper.id, [...completedMissions]);
     
-    // Save today's submission
-    localStorage.setItem(`camper_${selectedCamper.id}_submission_${today}`, JSON.stringify(submissionData));
-    
-    // Add to history
-    const history = JSON.parse(localStorage.getItem(`camper_${selectedCamper.id}_history`) || '[]');
-    history.push(submissionData);
-    localStorage.setItem(`camper_${selectedCamper.id}_history`, JSON.stringify(history));
-    setSubmissionHistory(history);
-    
+    // Update local state
     setSubmissionStatus('submitted');
+    
+    // Refresh submission history
+    const history = DataStorage.getSubmissionHistory(selectedCamper.id);
+    setSubmissionHistory(history);
     
     toast({
       title: "Missions Submitted! 🎉",
@@ -124,25 +109,8 @@ const CamperDashboard = () => {
   const handleRequestEdit = () => {
     if (!selectedCamper) return;
     
-    const today = new Date().toDateString();
-    const editRequest = {
-      date: today,
-      currentMissions: [...completedMissions],
-      requestedAt: new Date().toISOString(),
-      reason: 'Daily edit request'
-    };
-    
-    localStorage.setItem(`camper_${selectedCamper.id}_edit_requested_${today}`, JSON.stringify(editRequest));
-    
-    // Add edit request to staff pending list
-    const pendingEdits = JSON.parse(localStorage.getItem('pending_edit_requests') || '[]');
-    pendingEdits.push({
-      camperId: selectedCamper.id,
-      camperName: selectedCamper.name,
-      bunk: selectedBunk.displayName,
-      ...editRequest
-    });
-    localStorage.setItem('pending_edit_requests', JSON.stringify(pendingEdits));
+    // Request edit using new data system
+    DataStorage.requestSubmissionEdit(selectedCamper.id, 'Daily edit request');
     
     setSubmissionStatus('edit_requested');
     
@@ -173,7 +141,7 @@ const CamperDashboard = () => {
   const totalMissions = missions.length;
   const progressPercentage = totalMissions > 0 ? Math.round((completedCount / totalMissions) * 100) : 0;
   
-  const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
+  const dailyRequired = DataStorage.getDailyRequired();
   const canSubmit = completedCount >= dailyRequired && submissionStatus === 'none';
   const canRequestEdit = submissionStatus === 'submitted';
 
@@ -271,6 +239,7 @@ const CamperDashboard = () => {
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           submission.status === 'approved' ? 'bg-green-100 text-green-700' :
                           submission.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          submission.status === 'edit_requested' ? 'bg-blue-100 text-blue-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
                           {submission.status}
@@ -279,6 +248,11 @@ const CamperDashboard = () => {
                       <p className="text-sm text-gray-600">
                         {submission.missions.length} missions completed
                       </p>
+                      {submission.editRequestReason && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          Edit reason: {submission.editRequestReason}
+                        </p>
+                      )}
                     </div>
                   ))
                 )}

@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Users, CheckCircle2, Calendar, Eye, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
+import { DataStorage } from '@/utils/dataStorage';
 import StaffLogin from '@/components/StaffLogin';
 import BulkCompleteDialog from '@/components/BulkCompleteDialog';
 import CamperDetailsModal from '@/components/CamperDetailsModal';
@@ -94,15 +95,18 @@ const StaffDashboard = () => {
 
   const handleBulkComplete = (camperIds: string[], missionIds: string[]) => {
     camperIds.forEach(camperId => {
-      const existingProgress = localStorage.getItem(`camper_${camperId}_missions`);
-      const currentCompleted = existingProgress ? new Set(JSON.parse(existingProgress)) : new Set();
-      
-      missionIds.forEach(missionId => currentCompleted.add(missionId));
-      
-      localStorage.setItem(`camper_${camperId}_missions`, JSON.stringify([...currentCompleted]));
+      // Use new data system to update missions
+      const currentMissions = DataStorage.getCamperTodayMissions(camperId);
+      const updatedMissions = [...new Set([...currentMissions, ...missionIds])];
+      DataStorage.setCamperTodayMissions(camperId, updatedMissions);
     });
     
     setSelectedCampers([]);
+    
+    toast({
+      title: "Missions Updated",
+      description: `Updated missions for ${camperIds.length} campers`,
+    });
   };
 
   const handleViewCamperDetails = (camper: any) => {
@@ -138,19 +142,22 @@ const StaffDashboard = () => {
     return acc;
   }, {});
 
-  // Calculate statistics
+  // Calculate statistics using new data system
   const totalCampers = bunkData.campers.length;
-  const totalMissionsToday = totalCampers * activeMissions.length;
+  const dailyRequired = DataStorage.getDailyRequired();
   
-  let completedMissionsToday = 0;
+  let qualifiedToday = 0;
+  let totalCompletedMissions = 0;
+  
   bunkData.campers.forEach((camper: any) => {
-    const progress = localStorage.getItem(`camper_${camper.id}_missions`);
-    if (progress) {
-      completedMissionsToday += JSON.parse(progress).length;
+    const status = DataStorage.getCamperTodayStatus(camper.id);
+    if (status.qualified && (status.status === 'approved' || status.status === 'pending')) {
+      qualifiedToday++;
     }
+    totalCompletedMissions += status.submittedCount;
   });
 
-  const completionRate = totalMissionsToday > 0 ? Math.round((completedMissionsToday / totalMissionsToday) * 100) : 0;
+  const completionRate = totalCampers > 0 ? Math.round((qualifiedToday / totalCampers) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
@@ -211,12 +218,12 @@ const StaffDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <span>Completed Today</span>
+                <span>Qualified Today</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{completedMissionsToday}</div>
-              <p className="text-sm text-gray-600">Out of {totalMissionsToday} total</p>
+              <div className="text-3xl font-bold text-gray-900">{qualifiedToday}</div>
+              <p className="text-sm text-gray-600">Out of {totalCampers} campers</p>
             </CardContent>
           </Card>
 
@@ -283,9 +290,9 @@ const StaffDashboard = () => {
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {bunkData.campers.map((camper: any) => {
-                    const progress = localStorage.getItem(`camper_${camper.id}_missions`);
-                    const completedMissions = progress ? JSON.parse(progress).length : 0;
-                    const progressPercentage = activeMissions.length > 0 ? Math.round((completedMissions / activeMissions.length) * 100) : 0;
+                    const status = DataStorage.getCamperTodayStatus(camper.id);
+                    const progressPercentage = activeMissions.length > 0 ? 
+                      Math.round((status.submittedCount / activeMissions.length) * 100) : 0;
                     const isSelected = selectedCampers.includes(camper.id);
 
                     return (
@@ -312,7 +319,21 @@ const StaffDashboard = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Completed</span>
-                                <span className="font-semibold">{completedMissions}/{activeMissions.length}</span>
+                                <span className="font-semibold">{status.submittedCount}/{activeMissions.length}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Status</span>
+                                <span className={`font-semibold ${
+                                  status.status === 'approved' ? 'text-green-600' :
+                                  status.status === 'pending' ? 'text-yellow-600' :
+                                  status.status === 'edit_requested' ? 'text-blue-600' :
+                                  'text-red-600'
+                                }`}>
+                                  {status.status === 'not_submitted' ? 'Not Submitted' :
+                                   status.status === 'pending' ? 'Pending' :
+                                   status.status === 'edit_requested' ? 'Edit Requested' :
+                                   'Approved'}
+                                </span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div 
