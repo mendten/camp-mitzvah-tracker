@@ -19,7 +19,8 @@ const Index = () => {
   };
 
   const handleBunkSelect = (bunkId: string) => {
-    localStorage.setItem('selectedBunkId', bunkId);
+    // Use consistent localStorage key
+    localStorage.setItem('selectedBunk', bunkId);
     navigate('/camper-login');
   };
 
@@ -82,7 +83,6 @@ const Index = () => {
           </p>
         </div>
 
-        {/* Bunks Selection */}
         <div className="space-y-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Choose Your Bunk</h2>

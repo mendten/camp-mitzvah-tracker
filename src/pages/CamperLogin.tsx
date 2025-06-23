@@ -9,8 +9,12 @@ const CamperLogin = () => {
   const [selectedBunkId, setSelectedBunkId] = useState<string>('');
 
   useEffect(() => {
-    const bunkId = localStorage.getItem('selectedBunkId');
+    console.log('CamperLogin - checking localStorage...');
+    const bunkId = localStorage.getItem('selectedBunk');
+    console.log('Found bunkId in localStorage:', bunkId);
+    
     if (!bunkId) {
+      console.log('No bunk selected, redirecting to home');
       navigate('/');
       return;
     }
@@ -18,19 +22,25 @@ const CamperLogin = () => {
   }, [navigate]);
 
   const handleCamperSelect = (camperId: string) => {
+    console.log('Camper selected:', camperId, 'from bunk:', selectedBunkId);
+    
     const bunk = CAMP_DATA.find(b => b.id === selectedBunkId);
     const camper = bunk?.campers.find(c => c.id === camperId);
     
     if (camper) {
-      localStorage.setItem('currentCamperId', camperId);
-      localStorage.setItem('currentCamperName', camper.name);
-      localStorage.setItem('currentBunkId', selectedBunkId);
+      console.log('Found camper:', camper);
+      // Use consistent localStorage keys
+      localStorage.setItem('selectedCamper', camperId);
+      localStorage.setItem('selectedBunk', selectedBunkId);
+      console.log('Navigating to camper dashboard...');
       navigate('/camper');
+    } else {
+      console.error('Camper not found!', { camperId, selectedBunkId, bunk, camper });
     }
   };
 
   const handleBack = () => {
-    localStorage.removeItem('selectedBunkId');
+    localStorage.removeItem('selectedBunk');
     navigate('/');
   };
 

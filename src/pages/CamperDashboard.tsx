@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,12 +21,17 @@ const CamperDashboard = () => {
   const sessionInfo = getSessionInfo({ currentSession: 1, currentWeek: 3, currentDay: 4 });
 
   useEffect(() => {
+    console.log('CamperDashboard - checking localStorage...');
     const camperId = localStorage.getItem('selectedCamper');
     const bunkId = localStorage.getItem('selectedBunk');
+    
+    console.log('Found in localStorage:', { camperId, bunkId });
     
     if (camperId && bunkId) {
       const bunk = CAMP_DATA.find(b => b.id === bunkId);
       const camper = bunk?.campers.find(c => c.id === camperId);
+      
+      console.log('Found data:', { bunk, camper });
       
       if (bunk && camper) {
         setSelectedBunk(bunk);
@@ -39,9 +43,11 @@ const CamperDashboard = () => {
           setCompletedMissions(new Set(JSON.parse(savedProgress)));
         }
       } else {
+        console.error('Bunk or camper not found, redirecting home');
         navigate('/');
       }
     } else {
+      console.error('Missing camper or bunk ID, redirecting home');
       navigate('/');
     }
   }, [navigate]);
