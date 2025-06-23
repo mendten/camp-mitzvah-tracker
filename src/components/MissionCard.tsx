@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,13 +19,15 @@ interface MissionCardProps {
   onToggle: () => void;
   onSubmit?: () => void;
   showSubmitButton?: boolean;
+  disabled?: boolean;
 }
 
 const MissionCard: React.FC<MissionCardProps> = ({ 
   mission, 
   onToggle, 
   onSubmit, 
-  showSubmitButton = false 
+  showSubmitButton = false,
+  disabled = false
 }) => {
   const getTypeGradient = (type: string) => {
     switch (type) {
@@ -75,10 +76,20 @@ const MissionCard: React.FC<MissionCardProps> = ({
     return 'text-gray-600 group-hover:text-blue-600';
   };
 
+  const handleCardClick = () => {
+    if (!disabled && !mission.submitted && !mission.approved) {
+      onToggle();
+    }
+  };
+
   return (
     <Card 
-      className={`cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 ${getStatusColor()} group`}
-      onClick={!mission.submitted && !mission.approved ? onToggle : undefined}
+      className={`transition-all duration-300 border-2 ${getStatusColor()} group ${
+        disabled || mission.submitted || mission.approved 
+          ? 'cursor-default opacity-75' 
+          : 'cursor-pointer hover:scale-105 hover:shadow-xl'
+      }`}
+      onClick={handleCardClick}
     >
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
