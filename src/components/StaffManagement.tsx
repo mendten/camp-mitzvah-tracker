@@ -34,8 +34,9 @@ const StaffManagement = () => {
     return CAMP_DATA.flatMap(bunk =>
       bunk.staff.map(staff => ({
         ...staff,
+        role: localStorage.getItem(`staff_${staff.id}_role`) || 'Counselor', // Add default role
         bunkId: bunk.id,
-        accessCode: generateAccessCode(),
+        accessCode: localStorage.getItem(`staff_${staff.id}_access`) || generateAccessCode(),
         phone: localStorage.getItem(`staff_${staff.id}_phone`) || '',
         email: localStorage.getItem(`staff_${staff.id}_email`) || '',
         notes: localStorage.getItem(`staff_${staff.id}_notes`) || ''
@@ -79,6 +80,7 @@ const StaffManagement = () => {
     };
 
     // Save to localStorage
+    localStorage.setItem(`staff_${staff.id}_role`, staff.role);
     localStorage.setItem(`staff_${staff.id}_phone`, staff.phone);
     localStorage.setItem(`staff_${staff.id}_email`, staff.email);
     localStorage.setItem(`staff_${staff.id}_notes`, staff.notes);
@@ -98,6 +100,7 @@ const StaffManagement = () => {
     if (!selectedStaff) return;
 
     // Update localStorage
+    localStorage.setItem(`staff_${selectedStaff.id}_role`, selectedStaff.role);
     localStorage.setItem(`staff_${selectedStaff.id}_phone`, selectedStaff.phone || '');
     localStorage.setItem(`staff_${selectedStaff.id}_email`, selectedStaff.email || '');
     localStorage.setItem(`staff_${selectedStaff.id}_notes`, selectedStaff.notes || '');
@@ -121,6 +124,7 @@ const StaffManagement = () => {
       setStaffList(staffList.filter(staff => staff.id !== staffId));
       
       // Clean up localStorage
+      localStorage.removeItem(`staff_${staffId}_role`);
       localStorage.removeItem(`staff_${staffId}_phone`);
       localStorage.removeItem(`staff_${staffId}_email`);
       localStorage.removeItem(`staff_${staffId}_notes`);
@@ -306,6 +310,20 @@ const StaffManagement = () => {
                   value={selectedStaff.name}
                   onChange={(e) => setSelectedStaff({...selectedStaff, name: e.target.value})}
                 />
+              </div>
+              <div>
+                <Label>Role</Label>
+                <Select value={selectedStaff.role} onValueChange={(value) => setSelectedStaff({...selectedStaff, role: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Head Counselor">Head Counselor</SelectItem>
+                    <SelectItem value="Counselor">Counselor</SelectItem>
+                    <SelectItem value="Junior Counselor">Junior Counselor</SelectItem>
+                    <SelectItem value="Specialist">Specialist</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Access Code</Label>
