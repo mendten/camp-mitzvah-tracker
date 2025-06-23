@@ -158,6 +158,7 @@ const StaffDashboard = () => {
   });
 
   const completionRate = totalCampers > 0 ? Math.round((qualifiedToday / totalCampers) * 100) : 0;
+  const completedMissionsToday = totalCompletedMissions;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
@@ -405,11 +406,9 @@ const StaffDashboard = () => {
                         <span>Most Active Camper</span>
                         <span className="font-semibold">
                           {bunkData.campers.reduce((max: any, camper: any) => {
-                            const progress = localStorage.getItem(`camper_${camper.id}_missions`);
-                            const completed = progress ? JSON.parse(progress) : 0;
-                            const maxProgress = localStorage.getItem(`camper_${max.id}_missions`);
-                            const maxCompleted = maxProgress ? JSON.parse(maxProgress) : 0;
-                            return completed > maxCompleted ? camper : max;
+                            const maxStatus = DataStorage.getCamperTodayStatus(max.id);
+                            const camperStatus = DataStorage.getCamperTodayStatus(camper.id);
+                            return camperStatus.submittedCount > maxStatus.submittedCount ? camper : max;
                           }).name}
                         </span>
                       </div>
@@ -420,9 +419,8 @@ const StaffDashboard = () => {
                     <div className="space-y-2">
                       {activeMissions.map(mission => {
                         const completedBy = bunkData.campers.filter((camper: any) => {
-                          const progress = localStorage.getItem(`camper_${camper.id}_missions`);
-                          const completed = progress ? JSON.parse(progress) : [];
-                          return completed.includes(mission.id);
+                          const todayMissions = DataStorage.getCamperTodayMissions(camper.id);
+                          return todayMissions.includes(mission.id);
                         }).length;
                         const percentage = Math.round((completedBy / totalCampers) * 100);
 
