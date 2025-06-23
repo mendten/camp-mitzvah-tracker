@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { DataStorage } from '@/utils/dataStorage';
+import { DEFAULT_MISSIONS } from '@/data/campData';
 
 interface CamperCalendarProps {
   completedMissions: Set<string>;
@@ -15,43 +17,55 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Generate sample completion data for the calendar
+  // Get real completion data for any date
   const getCompletionDataForDate = (date: Date) => {
     const dateKey = date.toISOString().split('T')[0];
-    const savedData = localStorage.getItem(`camper_${camperId}_history_${dateKey}`);
-    if (savedData) {
-      return JSON.parse(savedData);
-    }
+    const isToday = dateKey === DataStorage.getTodayDateString();
     
-    // Generate sample data for demo
-    const isToday = date.toDateString() === new Date().toDateString();
     if (isToday) {
+      // Use real data for today
+      const status = DataStorage.getCamperTodayStatus(camperId);
+      const todayMissions = DataStorage.getCamperTodayMissions(camperId);
       return {
-        completed: completedMissions.size,
+        completed: status.submittedCount,
         total: missions.length,
-        missions: [...completedMissions]
+        missions: todayMissions,
+        status: status.status,
+        qualified: status.qualified
+      };
+    } else {
+      // Check submission history for other dates
+      const history = DataStorage.getSubmissionHistory(camperId);
+      const daySubmission = history.find(h => h.date === dateKey);
+      
+      if (daySubmission) {
+        return {
+          completed: daySubmission.missions.length,
+          total: missions.length,
+          missions: daySubmission.missions,
+          status: daySubmission.status,
+          qualified: daySubmission.missions.length >= DataStorage.getDailyRequired()
+        };
+      }
+      
+      // No data for this date
+      return {
+        completed: 0,
+        total: missions.length,
+        missions: [],
+        status: 'not_submitted' as const,
+        qualified: false
       };
     }
-    
-    // Sample historical data
-    const dayOfMonth = date.getDate();
-    const completed = Math.min(missions.length, Math.floor(dayOfMonth / 3) + 2);
-    return {
-      completed,
-      total: missions.length,
-      missions: missions.slice(0, completed).map(m => m.id)
-    };
   };
 
   const getDayColor = (date: Date) => {
     const data = getCompletionDataForDate(date);
-    const percentage = data.total > 0 ? (data.completed / data.total) * 100 : 0;
     
-    if (percentage === 100) return 'bg-green-500 text-white';
-    if (percentage >= 75) return 'bg-green-300';
-    if (percentage >= 50) return 'bg-yellow-300';
-    if (percentage >= 25) return 'bg-orange-300';
-    if (percentage > 0) return 'bg-red-300';
+    if (data.status === 'approved') return 'bg-green-500 text-white';
+    if (data.status === 'pending') return 'bg-yellow-500 text-white';
+    if (data.status === 'edit_requested') return 'bg-blue-500 text-white';
+    if (data.completed > 0) return 'bg-orange-300';
     return '';
   };
 
@@ -91,34 +105,52 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
             onSelect={setSelectedDate}
             month={currentMonth}
             onMonthChange={setCurrentMonth}
-            className="rounded-md border"
+            className="rounded-md border pointer-events-auto"
             modifiers={{
-              completed: (date) => {
+              approved: (date) => {
                 const data = getCompletionDataForDate(date);
-                return data.completed === data.total && data.total > 0;
+                return data.status === 'approved';
+              },
+              pending: (date) => {
+                const data = getCompletionDataForDate(date);
+                return data.status === 'pending';
+              },
+              editRequested: (date) => {
+                const data = getCompletionDataForDate(date);
+                return data.status === 'edit_requested';
               },
               partial: (date) => {
                 const data = getCompletionDataForDate(date);
-                return data.completed > 0 && data.completed < data.total;
+                return data.completed > 0 && data.status === 'not_submitted';
               }
             }}
             modifiersStyles={{
-              completed: { backgroundColor: '#10b981', color: 'white' },
-              partial: { backgroundColor: '#f59e0b', color: 'white' }
+              approved: { backgroundColor: '#10b981', color: 'white' },
+              pending: { backgroundColor: '#f59e0b', color: 'white' },
+              editRequested: { backgroundColor: '#3b82f6', color: 'white' },
+              partial: { backgroundColor: '#fb923c', color: 'white' }
             }}
           />
-          <div className="mt-4 flex items-center justify-center space-x-4 text-xs">
+          <div className="mt-4 flex items-center justify-center space-x-2 text-xs flex-wrap gap-2">
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-green-500 rounded"></div>
-              <span>Completed</span>
+              <span>Approved</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+              <span>Pending</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-blue-500 rounded"></div>
+              <span>Edit Request</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-3 h-3 bg-orange-400 rounded"></div>
               <span>Partial</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-gray-300 rounded"></div>
-              <span>Not Started</span>
+              <span>None</span>
             </div>
           </div>
         </CardContent>
@@ -152,10 +184,23 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
                     ></div>
                   </div>
                 </div>
+                <div className="mt-2">
+                  <span className={`inline-block px-2 py-1 rounded text-sm font-medium ${
+                    selectedDateData.status === 'approved' ? 'bg-green-100 text-green-800' :
+                    selectedDateData.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedDateData.status === 'edit_requested' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedDateData.status === 'not_submitted' ? 'Not Submitted' :
+                     selectedDateData.status === 'pending' ? 'Pending Approval' :
+                     selectedDateData.status === 'edit_requested' ? 'Edit Requested' :
+                     'Approved'}
+                  </span>
+                </div>
               </div>
               
               <div className="space-y-2">
-                <h4 className="font-semibold text-gray-900">Completed Missions:</h4>
+                <h4 className="font-semibold text-gray-900">Mission Details:</h4>
                 {selectedDateData.missions.length > 0 ? (
                   <div className="grid gap-2">
                     {missions
@@ -163,7 +208,8 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
                       .map(mission => (
                         <div key={mission.id} className="flex items-center space-x-2 p-2 bg-green-50 rounded">
                           <span className="text-green-600">✓</span>
-                          <span className="text-sm">{mission.title}</span>
+                          <span className="text-sm font-medium">{mission.title}</span>
+                          <span className="text-xs text-gray-500 capitalize">({mission.type})</span>
                         </div>
                       ))
                     }
@@ -172,6 +218,17 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
                   <p className="text-gray-500 text-sm">No missions completed on this day</p>
                 )}
               </div>
+              
+              {selectedDateData.qualified && (
+                <div className="bg-green-50 border border-green-200 rounded p-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-green-600">🎯</span>
+                    <span className="text-sm font-medium text-green-800">
+                      Qualified for this day!
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-gray-500 text-center py-8">

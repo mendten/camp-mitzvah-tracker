@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, CheckCircle2, Calendar, Eye, Home } from 'lucide-react';
+import { LogOut, Users, CheckCircle2, Calendar, Eye, Home, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import { DataStorage } from '@/utils/dataStorage';
@@ -13,6 +14,7 @@ import BulkCompleteDialog from '@/components/BulkCompleteDialog';
 import CamperDetailsModal from '@/components/CamperDetailsModal';
 import PendingApprovalsCard from '@/components/PendingApprovalsCard';
 import CamperCalendar from '@/components/CamperCalendar';
+import StaffAdvancedFeatures from '@/components/StaffAdvancedFeatures';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
 
 const StaffDashboard = () => {
@@ -112,24 +114,6 @@ const StaffDashboard = () => {
   const handleViewCamperDetails = (camper: any) => {
     setSelectedCamperForDetails(camper);
     setShowCamperDetails(true);
-  };
-
-  const editCamperProgress = (camperId: string, missionId: string, completed: boolean) => {
-    const existingProgress = localStorage.getItem(`camper_${camperId}_missions`);
-    const currentCompleted = existingProgress ? new Set(JSON.parse(existingProgress)) : new Set();
-    
-    if (completed) {
-      currentCompleted.add(missionId);
-    } else {
-      currentCompleted.delete(missionId);
-    }
-    
-    localStorage.setItem(`camper_${camperId}_missions`, JSON.stringify([...currentCompleted]));
-    
-    toast({
-      title: "Progress Updated",
-      description: `Mission ${completed ? 'completed' : 'uncompleted'} for camper`,
-    });
   };
 
   if (!isAuthenticated) {
@@ -256,8 +240,9 @@ const StaffDashboard = () => {
         </div>
 
         <Tabs defaultValue="campers" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="campers">Camper Management</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced Tools</TabsTrigger>
             <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
@@ -363,6 +348,13 @@ const StaffDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="advanced">
+            <StaffAdvancedFeatures 
+              bunkCampers={bunkData.campers} 
+              bunkName={bunkData.displayName}
+            />
           </TabsContent>
 
           <TabsContent value="approvals">
