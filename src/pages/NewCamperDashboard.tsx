@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +15,7 @@ const NewCamperDashboard = () => {
   const [selectedCamper, setSelectedCamper] = useState<any>(null);
   const [selectedBunk, setSelectedBunk] = useState<any>(null);
   const [workingMissions, setWorkingMissions] = useState<Set<string>>(new Set());
-  const [submissionStatus, setSubmissionStatus] = useState<'working' | 'submitted' | 'edit_requested' | 'approved'>('working');
+  const [submissionStatus, setSubmissionStatus] = useState<'working' | 'submitted' | 'edit_requested' | 'approved' | 'rejected'>('working');
   const [showEditForm, setShowEditForm] = useState(false);
   const [editReason, setEditReason] = useState('');
 
@@ -193,6 +192,7 @@ const NewCamperDashboard = () => {
             submissionStatus === 'approved' ? 'bg-green-50' :
             submissionStatus === 'submitted' ? 'bg-blue-50' :
             submissionStatus === 'edit_requested' ? 'bg-yellow-50' :
+            submissionStatus === 'rejected' ? 'bg-red-50' :
             'bg-white/80'
           }`}>
             <CardHeader className="pb-3">
@@ -206,11 +206,13 @@ const NewCamperDashboard = () => {
                 submissionStatus === 'approved' ? 'text-green-600' :
                 submissionStatus === 'submitted' ? 'text-blue-600' :
                 submissionStatus === 'edit_requested' ? 'text-yellow-600' :
+                submissionStatus === 'rejected' ? 'text-red-600' :
                 'text-gray-600'
               }`}>
                 {submissionStatus === 'approved' ? '✅ Approved!' :
                  submissionStatus === 'submitted' ? '⏳ Submitted' :
                  submissionStatus === 'edit_requested' ? '✏️ Edit Requested' :
+                 submissionStatus === 'rejected' ? '❌ Rejected' :
                  canSubmit ? '✅ Ready' : '⏳ Working...'}
               </div>
               <p className="text-sm text-gray-600">Daily status</p>
@@ -307,6 +309,28 @@ const NewCamperDashboard = () => {
                   <p className="text-green-700">
                     Great job! Your missions have been approved by staff.
                   </p>
+                </div>
+              </div>
+            )}
+
+            {submissionStatus === 'rejected' && (
+              <div className="text-center">
+                <div className="bg-red-100 border border-red-300 rounded-lg p-6">
+                  <h3 className="text-xl font-bold text-red-800 mb-2">
+                    ❌ Submission Rejected
+                  </h3>
+                  <p className="text-red-700">
+                    Your submission was rejected. Please try again with different missions.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setSubmissionStatus('working');
+                      setWorkingMissions(new Set());
+                    }}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700"
+                  >
+                    Start Over
+                  </Button>
                 </div>
               </div>
             )}
