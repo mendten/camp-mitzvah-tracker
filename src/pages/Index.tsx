@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Shield, UserCheck, LogIn, Calendar } from 'lucide-react';
+import { Users, Shield, UserCheck, LogIn } from 'lucide-react';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
 import { CAMP_DATA } from '@/data/campData';
 import { initializeCamperCodes } from '@/utils/camperCodes';
@@ -11,7 +11,6 @@ import PublicDashboard from '@/components/PublicDashboard';
 
 const Index = () => {
   const navigate = useNavigate();
-  const [showHebrewDate, setShowHebrewDate] = useState(false);
   const [showPublicDashboard, setShowPublicDashboard] = useState(false);
   const hebrewDate = getCurrentHebrewDate();
   
@@ -28,7 +27,6 @@ const Index = () => {
   };
 
   const handleBunkSelect = (bunkId: string) => {
-    // Use consistent localStorage key
     localStorage.setItem('selectedBunk', bunkId);
     navigate('/camper-login');
   };
@@ -86,20 +84,9 @@ const Index = () => {
                 <h1 className="text-3xl font-bold text-blue-800">
                   Welcome to Gan Yisroel Florida!!
                 </h1>
-                <div className="flex items-center space-x-4">
-                  <p className="text-lg text-purple-600 font-semibold">
-                    {showHebrewDate ? hebrewDate.hebrew : hebrewDate.english}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowHebrewDate(!showHebrewDate)}
-                    className="bg-purple-50 hover:bg-purple-100 border-purple-300"
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {showHebrewDate ? 'Show English' : 'Show Hebrew'}
-                  </Button>
-                </div>
+                <p className="text-lg text-purple-600 font-semibold">
+                  {hebrewDate.hebrew}
+                </p>
               </div>
             </div>
             

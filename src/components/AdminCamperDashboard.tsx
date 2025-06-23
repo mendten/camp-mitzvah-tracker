@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,21 +6,39 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, AlertTriangle, Download, Search, Filter, Calendar } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Download, Search, Filter, Settings } from 'lucide-react';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import { getCamperCode } from '@/utils/camperCodes';
 import CamperEditDialog from './CamperEditDialog';
 import StaffManagement from './StaffManagement';
 import PublicDashboard from './PublicDashboard';
+import { useToast } from '@/hooks/use-toast';
 
 const AdminCamperDashboard = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBunk, setSelectedBunk] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedCamper, setSelectedCamper] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [currentSession, setCurrentSession] = useState(0);
-  const [showSessionPicker, setShowSessionPicker] = useState(false);
+  const [dailyRequired, setDailyRequired] = useState(3);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('mission_daily_required');
+    if (saved) {
+      setDailyRequired(parseInt(saved));
+    }
+  }, []);
+
+  const updateDailyRequired = (value: number) => {
+    setDailyRequired(value);
+    localStorage.setItem('mission_daily_required', value.toString());
+    toast({
+      title: "Settings Updated",
+      description: `Daily required missions set to ${value}`,
+    });
+  };
 
   // Get all campers from all bunks with their codes
   const getAllCampers = () => {
@@ -44,8 +63,6 @@ const AdminCamperDashboard = () => {
     
     const activeMissions = DEFAULT_MISSIONS.filter(m => m.isActive);
     const mandatoryMissions = activeMissions.filter(m => m.isMandatory);
-    
-    const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
     
     const completedMandatory = mandatoryMissions.filter(m => 
       approvedMissions.includes(m.id)
@@ -96,6 +113,7 @@ const AdminCamperDashboard = () => {
 
   const handleSaveCamper = (updatedCamper: any) => {
     console.log('Saving camper:', updatedCamper);
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleMissionToggle = (camperId: string, missionId: string) => {
@@ -105,8 +123,12 @@ const AdminCamperDashboard = () => {
       : [...approved, missionId];
     
     localStorage.setItem(`camper_${camperId}_approved`, JSON.stringify(newApproved));
-    // Force re-render by updating a state
-    setCurrentSession(prev => prev);
+    setRefreshKey(prev => prev + 1);
+    
+    toast({
+      title: newApproved.includes(missionId) ? "Mission Approved" : "Mission Unapproved",
+      description: `Mission ${newApproved.includes(missionId) ? 'approved' : 'unapproved'} for camper`,
+    });
   };
 
   const exportAllData = () => {
@@ -136,7 +158,7 @@ const AdminCamperDashboard = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `camp-data-session-${currentSession}.csv`;
+    a.download = `camp-data-export.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -156,12 +178,28 @@ const AdminCamperDashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" key={refreshKey}>
       <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Complete Admin Dashboard</span>
             <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 bg-blue-50 p-2 rounded-lg">
+                <Settings className="h-4 w-4 text-blue-600" />
+                <span className="text-sm">Daily Required:</span>
+                <Select value={dailyRequired.toString()} onValueChange={(value) => updateDailyRequired(parseInt(value))}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="5">5</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button onClick={exportAllData} size="sm" className="bg-green-600 hover:bg-green-700">
                 <Download className="h-4 w-4 mr-2" />
                 Export All Data
@@ -172,7 +210,7 @@ const AdminCamperDashboard = () => {
         <CardContent>
           <Tabs defaultValue="all-campers" className="space-y-4">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all-campers">All Campers</TabsTrigger>
+              <TabsTrigger value="all-campers">All Campers ({getAllCampers().length})</TabsTrigger>
               <TabsTrigger value="by-bunks">By Bunks</TabsTrigger>
               <TabsTrigger value="staff-management">Staff</TabsTrigger>
               <TabsTrigger value="public-dashboard">Dashboard</TabsTrigger>

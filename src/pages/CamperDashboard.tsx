@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, Trophy, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Trophy, Clock, Send, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import MissionCard from '@/components/MissionCard';
@@ -16,6 +17,7 @@ const CamperDashboard = () => {
   const [selectedBunk, setSelectedBunk] = useState<any>(null);
   const [missions, setMissions] = useState(DEFAULT_MISSIONS.filter(m => m.isActive));
   const [completedMissions, setCompletedMissions] = useState<Set<string>>(new Set());
+  const [submissionStatus, setSubmissionStatus] = useState<'none' | 'submitted' | 'can_edit'>('none');
   const [showCalendar, setShowCalendar] = useState(false);
   const hebrewDate = getCurrentHebrewDate();
   const sessionInfo = getSessionInfo({ currentSession: 1, currentWeek: 3, currentDay: 4 });
@@ -42,6 +44,21 @@ const CamperDashboard = () => {
         if (savedProgress) {
           setCompletedMissions(new Set(JSON.parse(savedProgress)));
         }
+        
+        // Check submission status for today
+        const today = new Date().toDateString();
+        const submissionDate = localStorage.getItem(`camper_${camperId}_submission_date`);
+        const hasSubmitted = submissionDate === today;
+        const lastEditDate = localStorage.getItem(`camper_${camperId}_last_edit_date`);
+        const canEdit = hasSubmitted && lastEditDate !== today;
+        
+        if (hasSubmitted && !canEdit) {
+          setSubmissionStatus('submitted');
+        } else if (hasSubmitted && canEdit) {
+          setSubmissionStatus('can_edit');
+        } else {
+          setSubmissionStatus('none');
+        }
       } else {
         console.error('Bunk or camper not found, redirecting home');
         navigate('/');
@@ -53,7 +70,7 @@ const CamperDashboard = () => {
   }, [navigate]);
 
   const toggleMission = (missionId: string) => {
-    if (!selectedCamper) return;
+    if (!selectedCamper || submissionStatus === 'submitted') return;
     
     const newCompleted = new Set(completedMissions);
     
@@ -73,6 +90,35 @@ const CamperDashboard = () => {
     
     setCompletedMissions(newCompleted);
     localStorage.setItem(`camper_${selectedCamper.id}_missions`, JSON.stringify([...newCompleted]));
+  };
+
+  const handleSubmit = () => {
+    if (!selectedCamper) return;
+    
+    const today = new Date().toDateString();
+    localStorage.setItem(`camper_${selectedCamper.id}_submission_date`, today);
+    localStorage.setItem(`camper_${selectedCamper.id}_submitted`, JSON.stringify([...completedMissions]));
+    
+    setSubmissionStatus('submitted');
+    
+    toast({
+      title: "Missions Submitted! 🎉",
+      description: "Your missions have been submitted for staff approval.",
+    });
+  };
+
+  const handleEdit = () => {
+    if (!selectedCamper) return;
+    
+    const today = new Date().toDateString();
+    localStorage.setItem(`camper_${selectedCamper.id}_last_edit_date`, today);
+    
+    setSubmissionStatus('none');
+    
+    toast({
+      title: "Edit Mode Enabled",
+      description: "You can now edit your missions (once per day only).",
+    });
   };
 
   const handleLogout = () => {
@@ -95,6 +141,10 @@ const CamperDashboard = () => {
   const completedCount = completedMissions.size;
   const totalMissions = missions.length;
   const progressPercentage = totalMissions > 0 ? Math.round((completedCount / totalMissions) * 100) : 0;
+  
+  // Get admin-defined required missions count
+  const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
+  const canSubmit = completedCount >= dailyRequired && submissionStatus === 'none';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -176,12 +226,12 @@ const CamperDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-green-600" />
-                <span>Remaining</span>
+                <span>Required</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{totalMissions - completedCount}</div>
-              <p className="text-sm text-gray-600">Missions left</p>
+              <div className="text-3xl font-bold text-gray-900">{dailyRequired}</div>
+              <p className="text-sm text-gray-600">For qualification</p>
             </CardContent>
           </Card>
 
@@ -189,20 +239,51 @@ const CamperDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <User className="h-5 w-5 text-purple-600" />
-                <span>Bunk</span>
+                <span>Status</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{selectedBunk.displayName}</div>
-              <p className="text-sm text-gray-600">{selectedBunk.campers.length} campers</p>
+              <div className="text-lg font-bold text-gray-900">
+                {submissionStatus === 'submitted' ? '✅ Submitted' : 
+                 submissionStatus === 'can_edit' ? '✏️ Can Edit' : 
+                 completedCount >= dailyRequired ? '✅ Ready' : '⏳ Working'}
+              </div>
+              <p className="text-sm text-gray-600">Daily status</p>
             </CardContent>
           </Card>
         </div>
 
         <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
           <CardHeader>
-            <CardTitle className="text-xl">Today's Missions</CardTitle>
-            <p className="text-gray-600">Complete your daily missions to earn progress!</p>
+            <CardTitle className="text-xl flex items-center justify-between">
+              <span>Today's Missions</span>
+              <div className="flex space-x-2">
+                {submissionStatus === 'submitted' && (
+                  <Button
+                    onClick={handleEdit}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center space-x-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Edit (Once per day)</span>
+                  </Button>
+                )}
+                {canSubmit && (
+                  <Button
+                    onClick={handleSubmit}
+                    className="bg-green-600 hover:bg-green-700 flex items-center space-x-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    <span>Submit for Approval</span>
+                  </Button>
+                )}
+              </div>
+            </CardTitle>
+            <p className="text-gray-600">
+              Complete at least {dailyRequired} missions to submit for approval! 
+              {submissionStatus === 'submitted' && ' (Already submitted today)'}
+            </p>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -214,6 +295,7 @@ const CamperDashboard = () => {
                     completed: completedMissions.has(mission.id)
                   }}
                   onToggle={() => toggleMission(mission.id)}
+                  disabled={submissionStatus === 'submitted'}
                 />
               ))}
             </div>

@@ -20,57 +20,37 @@ const HEBREW_NUMBERS: { [key: number]: string } = {
 // Hebrew days of week
 const HEBREW_DAYS = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'שבת קודש'];
 
-// Convert Gregorian date to Hebrew date (simplified algorithm)
-function gregorianToHebrew(date: Date) {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+export function getCurrentHebrewDate(): HebrewDate {
+  const now = new Date();
   
-  // Simple conversion - Hebrew year is approximately Gregorian year + 3760
-  const hebrewYear = year + 3760;
+  // Simple summer camp period mapping (June-August)
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
   
-  // Determine Hebrew month based on time of year
   let hebrewMonth: string;
   let hebrewDay: number;
   
-  // Summer camp period (June-August) mapping
-  if (month >= 6 && month <= 8) {
-    if (month === 6) {
-      hebrewMonth = 'סיון';
-      hebrewDay = day + 15; // Approximate offset for Sivan
-    } else if (month === 7) {
-      hebrewMonth = 'תמוז';
-      hebrewDay = day;
-    } else {
-      hebrewMonth = 'אב';
-      hebrewDay = day;
-    }
+  // During summer camp period (June-August)
+  if (month === 6) {
+    hebrewMonth = 'סיון';
+    hebrewDay = day + 15; // Approximate offset
+  } else if (month === 7) {
+    hebrewMonth = 'תמוז';
+    hebrewDay = day;
+  } else if (month === 8) {
+    hebrewMonth = 'אב';
+    hebrewDay = day;
   } else {
-    // Default mapping for other months
-    const monthMap = [
-      'טבת', 'שבט', 'אדר', 'ניסן', 'אייר', 'סיון',
-      'תמוז', 'אב', 'אלול', 'תשרי', 'חשון', 'כסלו'
-    ];
-    hebrewMonth = monthMap[month - 1];
+    // Default for other times of year
+    hebrewMonth = 'אב';
     hebrewDay = day;
   }
   
   // Ensure day doesn't exceed 30
   if (hebrewDay > 30) hebrewDay = 30;
   
-  return {
-    year: hebrewYear,
-    month: hebrewMonth,
-    day: hebrewDay
-  };
-}
-
-export function getCurrentHebrewDate(): HebrewDate {
-  const now = new Date();
-  const hebrew = gregorianToHebrew(now);
-  
-  const hebrewDayStr = HEBREW_NUMBERS[hebrew.day] || hebrew.day.toString();
-  const hebrewText = `${hebrewDayStr} ${hebrew.month} תשפ"ה`;
+  const hebrewDayStr = HEBREW_NUMBERS[hebrewDay] || hebrewDay.toString();
+  const hebrewText = `${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
   
   const english = now.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -83,11 +63,31 @@ export function getCurrentHebrewDate(): HebrewDate {
 }
 
 export function getHebrewDateForDate(date: Date): HebrewDate {
-  const hebrew = gregorianToHebrew(date);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
   const dayOfWeek = HEBREW_DAYS[date.getDay()];
   
-  const hebrewDayStr = HEBREW_NUMBERS[hebrew.day] || hebrew.day.toString();
-  const hebrewText = `${dayOfWeek}, ${hebrewDayStr} ${hebrew.month} תשפ"ה`;
+  let hebrewMonth: string;
+  let hebrewDay: number;
+  
+  if (month === 6) {
+    hebrewMonth = 'סיון';
+    hebrewDay = day + 15;
+  } else if (month === 7) {
+    hebrewMonth = 'תמוז';
+    hebrewDay = day;
+  } else if (month === 8) {
+    hebrewMonth = 'אב';
+    hebrewDay = day;
+  } else {
+    hebrewMonth = 'אב';
+    hebrewDay = day;
+  }
+  
+  if (hebrewDay > 30) hebrewDay = 30;
+  
+  const hebrewDayStr = HEBREW_NUMBERS[hebrewDay] || hebrewDay.toString();
+  const hebrewText = `${dayOfWeek}, ${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
   
   const english = date.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -108,7 +108,28 @@ export function getSessionInfo(sessionConfig: any) {
 }
 
 export function formatHebrewDate(date: Date): string {
-  const hebrew = gregorianToHebrew(date);
-  const hebrewDayStr = HEBREW_NUMBERS[hebrew.day] || hebrew.day.toString();
-  return `${hebrewDayStr} ${hebrew.month} תשפ"ה`;
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  
+  let hebrewMonth: string;
+  let hebrewDay: number;
+  
+  if (month === 6) {
+    hebrewMonth = 'סיון';
+    hebrewDay = day + 15;
+  } else if (month === 7) {
+    hebrewMonth = 'תמוז';
+    hebrewDay = day;
+  } else if (month === 8) {
+    hebrewMonth = 'אב';
+    hebrewDay = day;
+  } else {
+    hebrewMonth = 'אב';
+    hebrewDay = day;
+  }
+  
+  if (hebrewDay > 30) hebrewDay = 30;
+  
+  const hebrewDayStr = HEBREW_NUMBERS[hebrewDay] || hebrewDay.toString();
+  return `${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
 }
