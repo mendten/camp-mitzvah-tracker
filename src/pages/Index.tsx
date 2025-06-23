@@ -1,15 +1,24 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Shield, UserCheck, LogIn } from 'lucide-react';
+import { Users, Shield, UserCheck, LogIn, Calendar } from 'lucide-react';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
 import { CAMP_DATA } from '@/data/campData';
+import { initializeCamperCodes } from '@/utils/camperCodes';
+import PublicDashboard from '@/components/PublicDashboard';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [showHebrewDate, setShowHebrewDate] = useState(false);
+  const [showPublicDashboard, setShowPublicDashboard] = useState(false);
   const hebrewDate = getCurrentHebrewDate();
+  
+  // Initialize camper codes on load
+  React.useEffect(() => {
+    initializeCamperCodes();
+  }, []);
   
   const bunkColors = {
     alef: 'from-blue-400 to-blue-600',
@@ -23,6 +32,35 @@ const Index = () => {
     localStorage.setItem('selectedBunk', bunkId);
     navigate('/camper-login');
   };
+
+  if (showPublicDashboard) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <header className="bg-white/90 backdrop-blur shadow-lg border-b relative z-10">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <img 
+                  src="/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png" 
+                  alt="Camp Gan Yisroel Florida Logo" 
+                  className="h-16 w-16 object-contain" 
+                />
+                <div>
+                  <h1 className="text-3xl font-bold text-blue-800">Camp Dashboard</h1>
+                </div>
+              </div>
+              <Button onClick={() => setShowPublicDashboard(false)} variant="outline">
+                Back to Home
+              </Button>
+            </div>
+          </div>
+        </header>
+        <div className="container mx-auto px-4 py-8">
+          <PublicDashboard />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 relative">
@@ -48,12 +86,31 @@ const Index = () => {
                 <h1 className="text-3xl font-bold text-blue-800">
                   Welcome to Gan Yisroel Florida!!
                 </h1>
-                <p className="text-lg text-purple-600 font-semibold">{hebrewDate.hebrew}</p>
-                <p className="text-gray-600">{hebrewDate.english}</p>
+                <div className="flex items-center space-x-4">
+                  <p className="text-lg text-purple-600 font-semibold">
+                    {showHebrewDate ? hebrewDate.hebrew : hebrewDate.english}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowHebrewDate(!showHebrewDate)}
+                    className="bg-purple-50 hover:bg-purple-100 border-purple-300"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {showHebrewDate ? 'Show English' : 'Show Hebrew'}
+                  </Button>
+                </div>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
+              <Button 
+                onClick={() => setShowPublicDashboard(true)}
+                variant="outline" 
+                className="bg-blue-50 hover:bg-blue-100 border-blue-300"
+              >
+                📊 View Dashboard
+              </Button>
               <Button 
                 onClick={() => navigate('/staff')} 
                 variant="outline" 

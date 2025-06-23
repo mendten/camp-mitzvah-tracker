@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,9 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, AlertTriangle, Download, Search, Filter } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Download, Search, Filter, Calendar } from 'lucide-react';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
+import { getCamperCode } from '@/utils/camperCodes';
 import CamperEditDialog from './CamperEditDialog';
+import StaffManagement from './StaffManagement';
+import PublicDashboard from './PublicDashboard';
 
 const AdminCamperDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,14 +19,16 @@ const AdminCamperDashboard = () => {
   const [selectedCamper, setSelectedCamper] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [currentSession, setCurrentSession] = useState(0);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
 
-  // Get all campers from all bunks
+  // Get all campers from all bunks with their codes
   const getAllCampers = () => {
     return CAMP_DATA.flatMap(bunk => 
       bunk.campers.map(camper => ({
         ...camper,
         bunk: bunk.displayName,
-        bunkId: bunk.id
+        bunkId: bunk.id,
+        code: getCamperCode(camper.id)
       }))
     );
   };
@@ -42,15 +46,14 @@ const AdminCamperDashboard = () => {
     const mandatoryMissions = activeMissions.filter(m => m.isMandatory);
     
     const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
-    const weeklyRequired = parseInt(localStorage.getItem('mission_weekly_required') || '15');
     
     const completedMandatory = mandatoryMissions.filter(m => 
       approvedMissions.includes(m.id)
     ).length;
     
     const todayQualified = approvedMissions.length >= dailyRequired;
-    const weekTotal = approvedMissions.length; // Simplified for demo
-    const sessionTotal = approvedMissions.length; // Simplified for demo
+    const weekTotal = approvedMissions.length;
+    const sessionTotal = approvedMissions.length;
     
     return {
       completedMissions: completedMissions.length,
@@ -62,7 +65,6 @@ const AdminCamperDashboard = () => {
       todayQualified,
       weekTotal,
       sessionTotal,
-      weeklyRequired,
       dailyRequired,
       progressPercentage: Math.round((approvedMissions.length / activeMissions.length) * 100)
     };
@@ -70,6 +72,7 @@ const AdminCamperDashboard = () => {
 
   const filteredCampers = getAllCampers().filter(camper => {
     const matchesSearch = camper.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         camper.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          camper.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesBunk = selectedBunk === 'all' || camper.bunkId === selectedBunk;
     
@@ -92,8 +95,18 @@ const AdminCamperDashboard = () => {
   };
 
   const handleSaveCamper = (updatedCamper: any) => {
-    // In a real app, this would update the database
     console.log('Saving camper:', updatedCamper);
+  };
+
+  const handleMissionToggle = (camperId: string, missionId: string) => {
+    const approved = JSON.parse(localStorage.getItem(`camper_${camperId}_approved`) || '[]');
+    const newApproved = approved.includes(missionId) 
+      ? approved.filter((id: string) => id !== missionId)
+      : [...approved, missionId];
+    
+    localStorage.setItem(`camper_${camperId}_approved`, JSON.stringify(newApproved));
+    // Force re-render by updating a state
+    setCurrentSession(prev => prev);
   };
 
   const exportAllData = () => {
@@ -101,6 +114,7 @@ const AdminCamperDashboard = () => {
       const stats = getCamperStats(camper.id);
       return {
         Name: camper.name,
+        Code: camper.code,
         ID: camper.id,
         Bunk: camper.bunk,
         'Today Qualified': stats.todayQualified ? 'Yes' : 'No',
@@ -112,14 +126,12 @@ const AdminCamperDashboard = () => {
       };
     });
     
-    // Convert to CSV
     const headers = Object.keys(allData[0] || {});
     const csvContent = [
       headers.join(','),
-      ...allData.map(row => headers.map(header => row[header]).join(','))
+      ...allData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
     ].join('\n');
     
-    // Download CSV
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -148,7 +160,7 @@ const AdminCamperDashboard = () => {
       <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Complete Camper Management Dashboard</span>
+            <span>Complete Admin Dashboard</span>
             <div className="flex items-center space-x-2">
               <Button onClick={exportAllData} size="sm" className="bg-green-600 hover:bg-green-700">
                 <Download className="h-4 w-4 mr-2" />
@@ -159,9 +171,11 @@ const AdminCamperDashboard = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all-campers" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all-campers">All Campers</TabsTrigger>
               <TabsTrigger value="by-bunks">By Bunks</TabsTrigger>
+              <TabsTrigger value="staff-management">Staff</TabsTrigger>
+              <TabsTrigger value="public-dashboard">Dashboard</TabsTrigger>
             </TabsList>
 
             <TabsContent value="all-campers">
@@ -213,10 +227,10 @@ const AdminCamperDashboard = () => {
                     return (
                       <Card key={camper.id} className="border-2 hover:shadow-lg transition-all">
                         <CardContent className="p-4">
-                          <div className="grid md:grid-cols-8 gap-4 items-center">
+                          <div className="grid md:grid-cols-9 gap-4 items-center">
                             <div className="md:col-span-2">
                               <h3 className="font-semibold text-lg">{camper.name}</h3>
-                              <p className="text-sm text-gray-600">ID: {camper.id}</p>
+                              <p className="text-sm text-gray-600">Code: {camper.code}</p>
                               <Badge variant="outline">Bunk {camper.bunk}</Badge>
                             </div>
                             
@@ -224,17 +238,17 @@ const AdminCamperDashboard = () => {
                               <div className={`text-lg font-bold ${stats.todayQualified ? 'text-green-600' : 'text-red-600'}`}>
                                 {stats.todayQualified ? <CheckCircle2 className="h-6 w-6 mx-auto" /> : <XCircle className="h-6 w-6 mx-auto" />}
                               </div>
-                              <p className="text-xs text-gray-600">Today Qualified</p>
+                              <p className="text-xs text-gray-600">Qualified</p>
                             </div>
                             
                             <div className="text-center">
-                              <div className="text-lg font-bold text-blue-600">{stats.weekTotal}</div>
-                              <p className="text-xs text-gray-600">Week Total</p>
+                              <div className="text-lg font-bold text-blue-600">{stats.approvedMissions}</div>
+                              <p className="text-xs text-gray-600">Approved</p>
                             </div>
                             
                             <div className="text-center">
-                              <div className="text-lg font-bold text-purple-600">{stats.sessionTotal}</div>
-                              <p className="text-xs text-gray-600">Session Total</p>
+                              <div className="text-lg font-bold text-purple-600">{stats.submittedMissions}</div>
+                              <p className="text-xs text-gray-600">Submitted</p>
                             </div>
                             
                             <div className="text-center">
@@ -252,6 +266,25 @@ const AdminCamperDashboard = () => {
                                   className="bg-orange-500 h-2 rounded-full"
                                   style={{ width: `${stats.progressPercentage}%` }}
                                 ></div>
+                              </div>
+                            </div>
+                            
+                            <div className="text-center">
+                              <div className="flex flex-col space-y-1">
+                                {DEFAULT_MISSIONS.filter(m => m.isActive).slice(0, 3).map(mission => {
+                                  const isApproved = JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]').includes(mission.id);
+                                  return (
+                                    <Button
+                                      key={mission.id}
+                                      size="sm"
+                                      variant={isApproved ? "default" : "outline"}
+                                      onClick={() => handleMissionToggle(camper.id, mission.id)}
+                                      className="text-xs px-2 py-1"
+                                    >
+                                      {mission.title.slice(0, 10)}...
+                                    </Button>
+                                  );
+                                })}
                               </div>
                             </div>
                             
@@ -286,7 +319,7 @@ const AdminCamperDashboard = () => {
                     };
                     
                     return (
-                      <Card key={bunk.id} className={`border-2 ${statusColors[performance.status]}`}>
+                      <Card key={bunk.id} className={`border-2 ${statusColors[performance.status as keyof typeof statusColors]}`}>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg">Bunk {bunk.displayName}</CardTitle>
                           <div className="flex items-center space-x-2">
@@ -320,6 +353,14 @@ const AdminCamperDashboard = () => {
                   })}
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="staff-management">
+              <StaffManagement />
+            </TabsContent>
+
+            <TabsContent value="public-dashboard">
+              <PublicDashboard />
             </TabsContent>
           </Tabs>
         </CardContent>
