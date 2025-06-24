@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,13 +33,9 @@ const AdminDashboard = () => {
     }
   }, []);
 
-  const handleLogin = (password: string) => {
-    if (password === adminPassword) {
-      setIsAuthenticated(true);
-      localStorage.setItem('adminAuthenticated', 'true');
-    } else {
-      alert('Incorrect password');
-    }
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('adminAuthenticated', 'true');
   };
 
   const handleLogout = () => {
@@ -165,8 +162,9 @@ const AdminDashboard = () => {
       </main>
 
       <BunkManagementDialog
-        open={showBunkManagement}
-        onOpenChange={setShowBunkManagement}
+        isOpen={showBunkManagement}
+        onClose={() => setShowBunkManagement(false)}
+        bunk={null}
       />
     </div>
   );
