@@ -1,4 +1,6 @@
 
+import { CAMP_DATA } from '@/data/campData';
+
 // Master Data Storage - Single source of truth for all camp data
 export interface CamperSubmission {
   id: string;
@@ -49,7 +51,6 @@ class MasterDataStorage {
     }
     
     // Initialize from CAMP_DATA if not exists
-    const { CAMP_DATA } = require('@/data/campData');
     const profiles: CamperProfile[] = [];
     
     CAMP_DATA.forEach((bunk: any) => {
