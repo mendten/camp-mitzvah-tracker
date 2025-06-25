@@ -10,24 +10,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Target, Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
-import { DEFAULT_MISSIONS } from '@/data/campData';
+import { Mission as CampMission, DEFAULT_MISSIONS } from '@/data/campData';
 
-interface Mission {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  isActive: boolean;
+interface ExtendedMission extends CampMission {
+  description?: string;
   category?: string;
   points?: number;
 }
 
 const MissionManagement = () => {
   const { toast } = useToast();
-  const [missions, setMissions] = useState<Mission[]>([]);
+  const [missions, setMissions] = useState<ExtendedMission[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
+  const [selectedMission, setSelectedMission] = useState<ExtendedMission | null>(null);
   const [newMission, setNewMission] = useState({
     title: '',
     description: '',
@@ -47,12 +43,19 @@ const MissionManagement = () => {
     if (storedMissions) {
       setMissions(JSON.parse(storedMissions));
     } else {
-      setMissions([...DEFAULT_MISSIONS]);
-      localStorage.setItem('custom_missions', JSON.stringify(DEFAULT_MISSIONS));
+      // Convert DEFAULT_MISSIONS to ExtendedMission format
+      const extendedMissions: ExtendedMission[] = DEFAULT_MISSIONS.map(mission => ({
+        ...mission,
+        description: mission.title, // Use title as description for existing missions
+        category: mission.type,
+        points: 1
+      }));
+      setMissions(extendedMissions);
+      localStorage.setItem('custom_missions', JSON.stringify(extendedMissions));
     }
   };
 
-  const saveMissions = (updatedMissions: Mission[]) => {
+  const saveMissions = (updatedMissions: ExtendedMission[]) => {
     setMissions(updatedMissions);
     localStorage.setItem('custom_missions', JSON.stringify(updatedMissions));
   };
@@ -67,11 +70,13 @@ const MissionManagement = () => {
       return;
     }
 
-    const mission: Mission = {
+    const mission: ExtendedMission = {
       id: `mission_${Date.now()}`,
       title: newMission.title,
       description: newMission.description,
+      type: newMission.category?.toLowerCase() || 'general',
       icon: newMission.icon,
+      isMandatory: false,
       isActive: newMission.isActive,
       category: newMission.category,
       points: newMission.points
@@ -375,7 +380,7 @@ const MissionManagement = () => {
                 <Label htmlFor="edit-description">Description</Label>
                 <Textarea
                   id="edit-description"
-                  value={selectedMission.description}
+                  value={selectedMission.description || ''}
                   onChange={(e) => setSelectedMission(prev => prev ? { ...prev, description: e.target.value } : null)}
                   rows={3}
                 />
