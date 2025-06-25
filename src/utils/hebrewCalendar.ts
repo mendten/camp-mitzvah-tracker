@@ -23,62 +23,52 @@ const HEBREW_DAYS = [
 
 // Hebrew numerals
 const HEBREW_NUMERALS: { [key: number]: string } = {
-  1: 'א', 2: 'ב', 3: 'ג', 4: 'ד', 5: 'ה', 6: 'ו', 7: 'ז', 8: 'ח', 9: 'ט', 10: 'י',
-  11: 'יא', 12: 'יב', 13: 'יג', 14: 'יד', 15: 'טו', 16: 'טז', 17: 'יז', 18: 'יח', 19: 'יט', 20: 'כ',
-  21: 'כא', 22: 'כב', 23: 'כג', 24: 'כד', 25: 'כה', 26: 'כו', 27: 'כז', 28: 'כח', 29: 'כט', 30: 'ל'
+  1: 'א\'', 2: 'ב\'', 3: 'ג\'', 4: 'ד\'', 5: 'ה\'', 6: 'ו\'', 7: 'ז\'', 8: 'ח\'', 9: 'ט\'', 10: 'י\'',
+  11: 'י"א', 12: 'י"ב', 13: 'י"ג', 14: 'י"ד', 15: 'ט"ו', 16: 'ט"ז', 17: 'י"ז', 18: 'י"ח', 19: 'י"ט', 20: 'כ\'',
+  21: 'כ"א', 22: 'כ"ב', 23: 'כ"ג', 24: 'כ"ד', 25: 'כ"ה', 26: 'כ"ו', 27: 'כ"ז', 28: 'כ"ח', 29: 'כ"ט', 30: 'ל\''
 };
 
-// Simple Hebrew date calculation for camp period (June-September 2024)
+// Simplified Hebrew calendar calculation for summer camp period
 export function getHebrewDate(gregorianDate: Date = new Date()): HebrewDate {
   const month = gregorianDate.getMonth() + 1; // 1-12
   const day = gregorianDate.getDate();
   const year = gregorianDate.getFullYear();
   const dayOfWeek = gregorianDate.getDay(); // 0=Sunday
 
-  // Camp period is approximately Sivan-Elul 5784
+  // Camp period mapping (approximate - in real implementation would use proper Jewish calendar library)
   let hebrewMonth: string;
   let hebrewDay: number;
-  let hebrewYear = 5784; // Hebrew year for 2024
+  let hebrewYear = 5785; // Hebrew year 5785 (2024-2025)
 
-  // Map Gregorian months to Hebrew months for camp period
-  if (month === 6) {
-    hebrewMonth = 'סיון';
-    hebrewDay = day + 15; // June starts around 15th of Sivan
-    if (hebrewDay > 29) {
+  // Summer months mapping to Hebrew calendar
+  if (month >= 6 && month <= 9) {
+    // June-September camp period
+    if (month === 6) {
+      hebrewMonth = 'סיון';
+      hebrewDay = day + 10; // Approximate offset
+    } else if (month === 7) {
       hebrewMonth = 'תמוז';
-      hebrewDay = hebrewDay - 29;
-    }
-  } else if (month === 7) {
-    hebrewMonth = 'תמוז';
-    hebrewDay = day;
-    if (hebrewDay > 29) {
+      hebrewDay = day;
+    } else if (month === 8) {
       hebrewMonth = 'אב';
-      hebrewDay = hebrewDay - 29;
-    }
-  } else if (month === 8) {
-    hebrewMonth = 'אב';
-    hebrewDay = day;
-    if (hebrewDay > 30) {
+      hebrewDay = day;
+    } else {
       hebrewMonth = 'אלול';
-      hebrewDay = hebrewDay - 30;
+      hebrewDay = day;
     }
-  } else if (month === 9) {
-    hebrewMonth = 'אלול';
-    hebrewDay = day;
   } else {
     // Default for other months
     hebrewMonth = 'תמוז';
     hebrewDay = day;
   }
 
-  // Ensure day is within valid range
+  // Ensure day doesn't exceed 30
   if (hebrewDay > 30) hebrewDay = 30;
-  if (hebrewDay < 1) hebrewDay = 1;
 
   const hebrewDayStr = HEBREW_NUMERALS[hebrewDay] || hebrewDay.toString();
   const hebrewDayOfWeek = HEBREW_DAYS[dayOfWeek];
   
-  const hebrewText = `${hebrewDayOfWeek}, ${hebrewDayStr} ${hebrewMonth} תשפ"ד`;
+  const hebrewText = `${hebrewDayOfWeek}, ${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
   const english = gregorianDate.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -112,7 +102,7 @@ export function getHebrewDateForDate(date: Date): HebrewDate {
 // Session information based on current date
 export function getSessionInfo(): { hebrew: string; english: string } {
   const now = new Date();
-  const sessionStart = new Date('2024-06-24'); // Camp start
+  const sessionStart = new Date('2024-06-24'); // Approximate camp start
   const daysDiff = Math.floor((now.getTime() - sessionStart.getTime()) / (1000 * 60 * 60 * 24));
   
   if (daysDiff < 0) {
