@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,15 +65,18 @@ const NewCamperDashboard = () => {
     }
     
     setWorkingMissions(newWorking);
-    // Save working missions immediately
+    // Save working missions
     MasterData.saveCamperWorkingMissions(selectedCamper.id, [...newWorking]);
   };
 
   const handleSubmit = () => {
     if (!selectedCamper || workingMissions.size < dailyRequired) return;
     
-    // Submit missions using master data
+    // Submit missions
     MasterData.submitCamperMissions(selectedCamper.id, [...workingMissions]);
+    
+    // Clear working missions
+    MasterData.clearCamperWorkingMissions(selectedCamper.id);
     
     // Update status
     setSubmissionStatus('submitted');
@@ -324,7 +326,6 @@ const NewCamperDashboard = () => {
                     onClick={() => {
                       setSubmissionStatus('working');
                       setWorkingMissions(new Set());
-                      MasterData.clearCamperWorkingMissions(selectedCamper.id);
                     }}
                     className="mt-4 bg-blue-600 hover:bg-blue-700"
                   >

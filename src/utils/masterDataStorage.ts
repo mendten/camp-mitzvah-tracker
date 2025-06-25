@@ -1,6 +1,4 @@
 
-import { CAMP_DATA } from '@/data/campData';
-
 // Master Data Storage - Single source of truth for all camp data
 export interface CamperSubmission {
   id: string;
@@ -51,6 +49,7 @@ class MasterDataStorage {
     }
     
     // Initialize from CAMP_DATA if not exists
+    const { CAMP_DATA } = require('@/data/campData');
     const profiles: CamperProfile[] = [];
     
     CAMP_DATA.forEach((bunk: any) => {
@@ -71,12 +70,6 @@ class MasterDataStorage {
 
   saveAllCamperProfiles(profiles: CamperProfile[]): void {
     localStorage.setItem('master_camper_profiles', JSON.stringify(profiles));
-  }
-
-  // Get camper profile by ID
-  getCamperProfile(camperId: string): CamperProfile | null {
-    const profiles = this.getAllCamperProfiles();
-    return profiles.find(p => p.id === camperId) || null;
   }
 
   // Generate camper code from name and bunk
@@ -100,11 +93,8 @@ class MasterDataStorage {
 
   // Submit missions for a camper
   submitCamperMissions(camperId: string, missionIds: string[]): void {
-    const profile = this.getCamperProfile(camperId);
-    if (!profile) {
-      console.error('Camper profile not found:', camperId);
-      return;
-    }
+    const profile = this.getAllCamperProfiles().find(p => p.id === camperId);
+    if (!profile) return;
 
     const submissions = this.getAllSubmissions();
     const today = this.getTodayString();
@@ -127,9 +117,6 @@ class MasterDataStorage {
     
     filtered.push(newSubmission);
     this.saveAllSubmissions(filtered);
-    
-    // Clear working missions after submission
-    this.clearCamperWorkingMissions(camperId);
   }
 
   // Get today's submission for a camper
@@ -162,19 +149,6 @@ class MasterDataStorage {
       submission.status = 'approved';
       submission.approvedAt = new Date().toISOString();
       submission.approvedBy = approvedBy;
-      this.saveAllSubmissions(submissions);
-    }
-  }
-
-  // Reject submission
-  rejectSubmission(submissionId: string, rejectedBy: string): void {
-    const submissions = this.getAllSubmissions();
-    const submission = submissions.find(s => s.id === submissionId);
-    
-    if (submission) {
-      submission.status = 'rejected';
-      submission.rejectedAt = new Date().toISOString();
-      submission.rejectedBy = rejectedBy;
       this.saveAllSubmissions(submissions);
     }
   }
@@ -214,55 +188,6 @@ class MasterDataStorage {
   // Set daily required missions
   setDailyRequired(count: number): void {
     localStorage.setItem('daily_required_missions', count.toString());
-  }
-
-  // Get all campers with their submission status for today
-  getAllCampersWithStatus(): Array<{
-    id: string;
-    name: string;
-    code: string;
-    bunkName: string;
-    bunkId: string;
-    todaySubmission: CamperSubmission | null;
-    workingMissions: string[];
-    status: 'working' | 'submitted' | 'approved' | 'edit_requested' | 'rejected';
-    missionCount: number;
-    isQualified: boolean;
-  }> {
-    const profiles = this.getAllCamperProfiles();
-    const dailyRequired = this.getDailyRequired();
-    
-    return profiles.map(profile => {
-      const todaySubmission = this.getCamperTodaySubmission(profile.id);
-      const workingMissions = this.getCamperWorkingMissions(profile.id);
-      
-      let status: 'working' | 'submitted' | 'approved' | 'edit_requested' | 'rejected' = 'working';
-      let missionCount = workingMissions.length;
-      
-      if (todaySubmission) {
-        status = todaySubmission.status;
-        missionCount = todaySubmission.missions.length;
-      }
-      
-      return {
-        id: profile.id,
-        name: profile.name,
-        code: profile.code,
-        bunkName: profile.bunkName,
-        bunkId: profile.bunkId,
-        todaySubmission,
-        workingMissions,
-        status,
-        missionCount,
-        isQualified: missionCount >= dailyRequired
-      };
-    });
-  }
-
-  // Get submissions that need approval
-  getPendingSubmissions(): CamperSubmission[] {
-    const submissions = this.getAllSubmissions();
-    return submissions.filter(s => s.status === 'submitted' || s.status === 'edit_requested');
   }
 }
 
