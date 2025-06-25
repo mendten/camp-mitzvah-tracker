@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Shield } from 'lucide-react';
+import { MasterData } from '@/utils/masterDataStorage';
 
 interface AdminLoginProps {
   onLogin: () => void;
@@ -16,9 +17,12 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onBack }) => {
   const [password, setPassword] = useState<string>('');
 
   const handleLogin = () => {
-    // For simulation, accept admin/admin123
-    if (username === 'admin' && password === 'admin123') {
+    const adminPassword = MasterData.getAdminPassword();
+    // For simulation, accept admin/admin123 or the stored admin password
+    if (username === 'admin' && (password === 'admin123' || password === adminPassword)) {
       onLogin();
+    } else {
+      alert('Incorrect credentials');
     }
   };
 
