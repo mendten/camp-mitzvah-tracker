@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search, Filter, CheckCircle, XCircle, Users, Download } from 'lucide-react';
-import { DataStorage } from '@/utils/dataStorage';
+import { MasterData } from '@/utils/masterDataStorage';
 import { DEFAULT_MISSIONS } from '@/data/campData';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,15 +25,19 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
   const [showBulkApproval, setShowBulkApproval] = useState(false);
   const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'request_edit'>('approve');
 
+  // Get campers with their current status using MasterData
+  const allCampersWithStatus = MasterData.getAllCampersWithStatus();
+  const bunkCampersWithStatus = allCampersWithStatus.filter(c => 
+    bunkCampers.some(bc => bc.id === c.id)
+  );
+
   // Filter campers based on search and status
-  const filteredCampers = bunkCampers.filter(camper => {
+  const filteredCampers = bunkCampersWithStatus.filter(camper => {
     const matchesSearch = camper.name.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchesSearch) return false;
 
     if (statusFilter === 'all') return true;
-    
-    const status = DataStorage.getCamperTodayStatus(camper.id);
-    return status.status === statusFilter;
+    return camper.status === statusFilter;
   });
 
   const handleBulkAction = () => {
@@ -47,21 +51,26 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
     }
 
     selectedCampers.forEach(camperId => {
+      const submission = MasterData.getCamperTodaySubmission(camperId);
+      if (!submission) return;
+
       switch (bulkAction) {
         case 'approve':
-          DataStorage.approveSubmission(camperId);
+          MasterData.approveSubmission(submission.id, 'Staff');
           break;
         case 'reject':
-          // For rejection, we'll clear today's submission
-          const submission = DataStorage.getCamperTodaySubmission(camperId);
-          if (submission) {
-            const today = DataStorage.getTodayDateString();
-            localStorage.removeItem(`camper_${camperId}_submission_${today}`);
-            DataStorage.setCamperTodayMissions(camperId, []);
-          }
+          MasterData.rejectSubmission(submission.id, 'Staff');
           break;
         case 'request_edit':
-          DataStorage.requestSubmissionEdit(camperId, 'Staff requested edits');
+          // For this simplified version, we'll mark as edit requested
+          const submissions = MasterData.getAllSubmissions();
+          const targetSubmission = submissions.find(s => s.id === submission.id);
+          if (targetSubmission) {
+            targetSubmission.status = 'edit_requested';
+            targetSubmission.editRequestReason = 'Staff requested edits';
+            targetSubmission.editRequestedAt = new Date().toISOString();
+            MasterData.saveAllSubmissions(submissions);
+          }
           break;
       }
     });
@@ -79,26 +88,25 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
   };
 
   const exportBunkData = () => {
-    const bunkData = bunkCampers.map(camper => {
-      const status = DataStorage.getCamperTodayStatus(camper.id);
-      const history = DataStorage.getSubmissionHistory(camper.id);
+    const bunkData = bunkCampersWithStatus.map(camper => {
+      const submissions = MasterData.getAllSubmissions().filter(s => s.camperId === camper.id);
       
       return {
+        code: camper.code,
         name: camper.name,
-        id: camper.id,
-        todayStatus: status.status,
-        todayCompleted: status.submittedCount,
-        qualified: status.qualified,
-        totalSubmissions: history.length,
-        approvedSubmissions: history.filter(h => h.status === 'approved').length
+        todayStatus: camper.status,
+        todayCompleted: camper.missionCount,
+        qualified: camper.isQualified,
+        totalSubmissions: submissions.length,
+        approvedSubmissions: submissions.filter(s => s.status === 'approved').length
       };
     });
 
     const csvContent = [
-      ['Name', 'ID', 'Today Status', 'Today Completed', 'Qualified', 'Total Submissions', 'Approved Submissions'],
+      ['Code', 'Name', 'Today Status', 'Today Completed', 'Qualified', 'Total Submissions', 'Approved Submissions'],
       ...bunkData.map(camper => [
+        camper.code,
         camper.name,
-        camper.id,
         camper.todayStatus,
         camper.todayCompleted,
         camper.qualified,
@@ -111,7 +119,7 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${bunkName}_report_${DataStorage.getTodayDateString()}.csv`;
+    a.download = `${bunkName}_report_${MasterData.getTodayString()}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
 
@@ -124,8 +132,9 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'submitted': return 'bg-yellow-100 text-yellow-800';
       case 'edit_requested': return 'bg-blue-100 text-blue-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -160,9 +169,9 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
                 <SelectItem value="edit_requested">Edit Requested</SelectItem>
-                <SelectItem value="not_submitted">Not Submitted</SelectItem>
+                <SelectItem value="working">Working</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -184,7 +193,6 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
           {/* Camper List */}
           <div className="space-y-2">
             {filteredCampers.map(camper => {
-              const status = DataStorage.getCamperTodayStatus(camper.id);
               const isSelected = selectedCampers.includes(camper.id);
 
               return (
@@ -207,22 +215,23 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
                     />
                     <div>
                       <p className="font-medium">{camper.name}</p>
-                      <p className="text-sm text-gray-500">ID: {camper.id}</p>
+                      <p className="text-sm text-gray-500">Code: {camper.code}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-3">
                     <div className="text-right">
-                      <p className="text-sm font-medium">{status.submittedCount}/{DEFAULT_MISSIONS.filter(m => m.isActive).length}</p>
+                      <p className="text-sm font-medium">{camper.missionCount}/{DEFAULT_MISSIONS.filter(m => m.isActive).length}</p>
                       <p className="text-xs text-gray-500">missions</p>
                     </div>
-                    <Badge className={getStatusColor(status.status)}>
-                      {status.status === 'not_submitted' ? 'Not Submitted' :
-                       status.status === 'pending' ? 'Pending' :
-                       status.status === 'edit_requested' ? 'Edit Requested' :
-                       'Approved'}
+                    <Badge className={getStatusColor(camper.status)}>
+                      {camper.status === 'working' ? 'Working' :
+                       camper.status === 'submitted' ? 'Submitted' :
+                       camper.status === 'edit_requested' ? 'Edit Requested' :
+                       camper.status === 'approved' ? 'Approved' :
+                       'Not Started'}
                     </Badge>
-                    {status.qualified && (
+                    {camper.isQualified && (
                       <CheckCircle className="h-5 w-5 text-green-500" />
                     )}
                   </div>

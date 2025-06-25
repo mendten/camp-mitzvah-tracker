@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Trophy, Users, Calendar, TrendingUp, Crown, Medal, Award } from 'lucide-react';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
+import { MasterData } from '@/utils/masterDataStorage';
 
 interface BunkStats {
   id: string;
@@ -32,21 +33,20 @@ const PublicDashboard = () => {
   const hebrewDate = getCurrentHebrewDate();
 
   const calculateBunkStats = (): BunkStats[] => {
-    const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
+    const allCampersWithStatus = MasterData.getAllCampersWithStatus();
+    const dailyRequired = MasterData.getDailyRequired();
     
     const stats = CAMP_DATA.map(bunk => {
+      const bunkCampers = allCampersWithStatus.filter(c => c.bunkId === bunk.id);
       let totalCompletions = 0;
       let qualifiedCampers = 0;
       let totalProgress = 0;
 
-      bunk.campers.forEach(camper => {
-        const approved = JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]');
-        const progress = Math.round((approved.length / DEFAULT_MISSIONS.filter(m => m.isActive).length) * 100);
+      bunkCampers.forEach(camper => {
+        totalCompletions += camper.missionCount;
+        totalProgress += (camper.missionCount / DEFAULT_MISSIONS.filter(m => m.isActive).length) * 100;
         
-        totalCompletions += approved.length;
-        totalProgress += progress;
-        
-        if (approved.length >= dailyRequired) {
+        if (camper.isQualified) {
           qualifiedCampers++;
         }
       });
@@ -54,10 +54,10 @@ const PublicDashboard = () => {
       return {
         id: bunk.id,
         name: bunk.displayName,
-        totalCampers: bunk.campers.length,
+        totalCampers: bunkCampers.length,
         qualifiedCampers,
         totalCompletions,
-        averageProgress: Math.round(totalProgress / bunk.campers.length),
+        averageProgress: bunkCampers.length > 0 ? Math.round(totalProgress / bunkCampers.length) : 0,
         rank: 0
       };
     });
@@ -71,32 +71,25 @@ const PublicDashboard = () => {
   };
 
   const calculateTopCampers = (): CamperStats[] => {
-    const allCampers: CamperStats[] = [];
+    const allCampersWithStatus = MasterData.getAllCampersWithStatus();
     
-    CAMP_DATA.forEach(bunk => {
-      bunk.campers.forEach(camper => {
-        const approved = JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]');
-        const qualifiedDays = parseInt(localStorage.getItem(`camper_${camper.id}_qualified_days`) || '0');
-        
-        allCampers.push({
-          id: camper.id,
-          name: camper.name,
-          bunk: bunk.displayName,
-          totalMissions: approved.length,
-          qualifiedDays
-        });
-      });
-    });
+    const topCampers = allCampersWithStatus
+      .map(camper => ({
+        id: camper.id,
+        name: camper.name,
+        bunk: camper.bunkName,
+        totalMissions: camper.missionCount,
+        qualifiedDays: camper.status === 'approved' ? 1 : 0 // Simplified for now
+      }))
+      .sort((a, b) => {
+        if (b.totalMissions !== a.totalMissions) {
+          return b.totalMissions - a.totalMissions;
+        }
+        return b.qualifiedDays - a.qualifiedDays;
+      })
+      .slice(0, 10);
 
-    // Sort by total missions completed, then by qualified days
-    allCampers.sort((a, b) => {
-      if (b.totalMissions !== a.totalMissions) {
-        return b.totalMissions - a.totalMissions;
-      }
-      return b.qualifiedDays - a.qualifiedDays;
-    });
-
-    return allCampers.slice(0, 10);
+    return topCampers;
   };
 
   useEffect(() => {

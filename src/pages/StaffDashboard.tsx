@@ -8,14 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Users, CheckCircle2, Calendar, Eye, Home, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
-import { DataStorage } from '@/utils/dataStorage';
 import StaffLogin from '@/components/StaffLogin';
 import BulkCompleteDialog from '@/components/BulkCompleteDialog';
 import CamperDetailsModal from '@/components/CamperDetailsModal';
 import PendingApprovalsCard from '@/components/PendingApprovalsCard';
-import CamperCalendar from '@/components/CamperCalendar';
 import StaffAdvancedFeatures from '@/components/StaffAdvancedFeatures';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
+import { MasterData } from '@/utils/masterDataStorage';
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -27,6 +26,7 @@ const StaffDashboard = () => {
   const [showBulkComplete, setShowBulkComplete] = useState(false);
   const [showCamperDetails, setShowCamperDetails] = useState(false);
   const [selectedCamperForDetails, setSelectedCamperForDetails] = useState<any>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const hebrewDate = getCurrentHebrewDate();
   const sessionInfo = getSessionInfo();
 
@@ -97,13 +97,13 @@ const StaffDashboard = () => {
 
   const handleBulkComplete = (camperIds: string[], missionIds: string[]) => {
     camperIds.forEach(camperId => {
-      // Use new data system to update missions
-      const currentMissions = DataStorage.getCamperTodayMissions(camperId);
+      const currentMissions = MasterData.getCamperWorkingMissions(camperId);
       const updatedMissions = [...new Set([...currentMissions, ...missionIds])];
-      DataStorage.setCamperTodayMissions(camperId, updatedMissions);
+      MasterData.saveCamperWorkingMissions(camperId, updatedMissions);
     });
     
     setSelectedCampers([]);
+    setRefreshKey(prev => prev + 1);
     
     toast({
       title: "Missions Updated",
@@ -126,23 +126,14 @@ const StaffDashboard = () => {
     return acc;
   }, {});
 
-  // Calculate statistics using new data system
-  const totalCampers = bunkData.campers.length;
-  const dailyRequired = DataStorage.getDailyRequired();
+  // Calculate statistics using MasterData
+  const allCampersWithStatus = MasterData.getAllCampersWithStatus();
+  const bunkCampersWithStatus = allCampersWithStatus.filter(c => c.bunkId === bunkData.id);
   
-  let qualifiedToday = 0;
-  let totalCompletedMissions = 0;
-  
-  bunkData.campers.forEach((camper: any) => {
-    const status = DataStorage.getCamperTodayStatus(camper.id);
-    if (status.qualified && (status.status === 'approved' || status.status === 'pending')) {
-      qualifiedToday++;
-    }
-    totalCompletedMissions += status.submittedCount;
-  });
-
+  const totalCampers = bunkCampersWithStatus.length;
+  const qualifiedToday = bunkCampersWithStatus.filter(c => c.isQualified && (c.status === 'approved' || c.status === 'submitted')).length;
+  const totalCompletedMissions = bunkCampersWithStatus.reduce((sum, c) => sum + c.missionCount, 0);
   const completionRate = totalCampers > 0 ? Math.round((qualifiedToday / totalCampers) * 100) : 0;
-  const completedMissionsToday = totalCompletedMissions;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
@@ -240,11 +231,10 @@ const StaffDashboard = () => {
         </div>
 
         <Tabs defaultValue="campers" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="campers">Camper Management</TabsTrigger>
             <TabsTrigger value="advanced">Advanced Tools</TabsTrigger>
             <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -275,10 +265,9 @@ const StaffDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {bunkData.campers.map((camper: any) => {
-                    const status = DataStorage.getCamperTodayStatus(camper.id);
+                  {bunkCampersWithStatus.map((camper) => {
                     const progressPercentage = activeMissions.length > 0 ? 
-                      Math.round((status.submittedCount / activeMissions.length) * 100) : 0;
+                      Math.round((camper.missionCount / activeMissions.length) * 100) : 0;
                     const isSelected = selectedCampers.includes(camper.id);
 
                     return (
@@ -305,20 +294,21 @@ const StaffDashboard = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Completed</span>
-                                <span className="font-semibold">{status.submittedCount}/{activeMissions.length}</span>
+                                <span className="font-semibold">{camper.missionCount}/{activeMissions.length}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Status</span>
                                 <span className={`font-semibold ${
-                                  status.status === 'approved' ? 'text-green-600' :
-                                  status.status === 'pending' ? 'text-yellow-600' :
-                                  status.status === 'edit_requested' ? 'text-blue-600' :
+                                  camper.status === 'approved' ? 'text-green-600' :
+                                  camper.status === 'submitted' ? 'text-yellow-600' :
+                                  camper.status === 'edit_requested' ? 'text-blue-600' :
                                   'text-red-600'
                                 }`}>
-                                  {status.status === 'not_submitted' ? 'Not Submitted' :
-                                   status.status === 'pending' ? 'Pending' :
-                                   status.status === 'edit_requested' ? 'Edit Requested' :
-                                   'Approved'}
+                                  {camper.status === 'working' ? 'Working' :
+                                   camper.status === 'submitted' ? 'Submitted' :
+                                   camper.status === 'edit_requested' ? 'Edit Requested' :
+                                   camper.status === 'approved' ? 'Approved' :
+                                   'Not Started'}
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -334,7 +324,8 @@ const StaffDashboard = () => {
                               className="w-full"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleViewCamperDetails(camper);
+                                const fullCamper = bunkData.campers.find((c: any) => c.id === camper.id);
+                                handleViewCamperDetails(fullCamper);
                               }}
                             >
                               <Eye className="h-4 w-4 mr-2" />
@@ -361,21 +352,6 @@ const StaffDashboard = () => {
             <PendingApprovalsCard bunkCampers={bunkData.campers} />
           </TabsContent>
 
-          <TabsContent value="calendar">
-            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-              <CardHeader>
-                <CardTitle>Staff Calendar View</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CamperCalendar 
-                  completedMissions={new Set()} 
-                  missions={activeMissions} 
-                  camperId="staff" 
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="reports">
             <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
               <CardHeader>
@@ -388,7 +364,7 @@ const StaffDashboard = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span>Total Missions Completed</span>
-                        <span className="font-semibold">{completedMissionsToday}</span>
+                        <span className="font-semibold">{totalCompletedMissions}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Completion Rate</span>
@@ -397,11 +373,10 @@ const StaffDashboard = () => {
                       <div className="flex justify-between">
                         <span>Most Active Camper</span>
                         <span className="font-semibold">
-                          {bunkData.campers.reduce((max: any, camper: any) => {
-                            const maxStatus = DataStorage.getCamperTodayStatus(max.id);
-                            const camperStatus = DataStorage.getCamperTodayStatus(camper.id);
-                            return camperStatus.submittedCount > maxStatus.submittedCount ? camper : max;
-                          }).name}
+                          {bunkCampersWithStatus.reduce((max, camper) => 
+                            camper.missionCount > max.missionCount ? camper : max, 
+                            bunkCampersWithStatus[0] || { name: 'None', missionCount: 0 }
+                          ).name}
                         </span>
                       </div>
                     </div>
@@ -410,11 +385,11 @@ const StaffDashboard = () => {
                     <h3 className="font-semibold">Mission Breakdown</h3>
                     <div className="space-y-2">
                       {activeMissions.map(mission => {
-                        const completedBy = bunkData.campers.filter((camper: any) => {
-                          const todayMissions = DataStorage.getCamperTodayMissions(camper.id);
-                          return todayMissions.includes(mission.id);
+                        const completedBy = bunkCampersWithStatus.filter(camper => {
+                          const todaySubmission = camper.todaySubmission;
+                          return todaySubmission && todaySubmission.missions.includes(mission.id);
                         }).length;
-                        const percentage = Math.round((completedBy / totalCampers) * 100);
+                        const percentage = totalCampers > 0 ? Math.round((completedBy / totalCampers) * 100) : 0;
 
                         return (
                           <div key={mission.id} className="flex items-center justify-between">

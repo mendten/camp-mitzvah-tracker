@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, Calendar, Settings, BarChart3, Home, Shield } from 'lucide-react';
+import { LogOut, Users, Calendar, Settings, BarChart3, Home, Shield, Target, UserPlus } from 'lucide-react';
 import AdminLogin from '@/components/AdminLogin';
 import AdminSubmissionsManagement from '@/components/AdminSubmissionsManagement';
 import AdminReportDashboard from '@/components/AdminReportDashboard';
@@ -12,6 +12,10 @@ import AdminAnalytics from '@/components/AdminAnalytics';
 import StaffManagement from '@/components/StaffManagement';
 import BunkManagementDialog from '@/components/BunkManagementDialog';
 import SessionManagement from '@/components/SessionManagement';
+import CamperManagement from '@/components/CamperManagement';
+import MissionManagement from '@/components/MissionManagement';
+import AdminSettings from '@/components/AdminSettings';
+import PublicDashboard from '@/components/PublicDashboard';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
 import { MasterData } from '@/utils/masterDataStorage';
 
@@ -48,6 +52,12 @@ const AdminDashboard = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('adminAuthenticated');
   };
+
+  // Get quick stats for the overview cards
+  const allCampersWithStatus = MasterData.getAllCampersWithStatus();
+  const pendingSubmissions = MasterData.getPendingSubmissions();
+  const qualifiedToday = allCampersWithStatus.filter(c => c.isQualified).length;
+  const totalSubmissions = MasterData.getAllSubmissions().length;
 
   if (!isAuthenticated) {
     return <AdminLogin onLogin={handleLogin} onBack={handleBackToHome} />;
@@ -92,15 +102,56 @@ const AdminDashboard = () => {
       </header>
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
-        <Tabs defaultValue="reports" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+        {/* Quick Stats Overview */}
+        <div className="grid md:grid-cols-4 gap-4">
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+            <CardContent className="p-6 text-center">
+              <Users className="h-12 w-12 mx-auto text-blue-600 mb-2" />
+              <div className="text-3xl font-bold text-gray-900">{allCampersWithStatus.length}</div>
+              <p className="text-gray-600">Total Campers</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+            <CardContent className="p-6 text-center">
+              <Calendar className="h-12 w-12 mx-auto text-green-600 mb-2" />
+              <div className="text-3xl font-bold text-gray-900">{qualifiedToday}</div>
+              <p className="text-gray-600">Qualified Today</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+            <CardContent className="p-6 text-center">
+              <BarChart3 className="h-12 w-12 mx-auto text-purple-600 mb-2" />
+              <div className="text-3xl font-bold text-gray-900">{pendingSubmissions.length}</div>
+              <p className="text-gray-600">Pending Approvals</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+            <CardContent className="p-6 text-center">
+              <Shield className="h-12 w-12 mx-auto text-orange-600 mb-2" />
+              <div className="text-3xl font-bold text-gray-900">{totalSubmissions}</div>
+              <p className="text-gray-600">Total Submissions</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="public" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="campers">Edit Campers</TabsTrigger>
+            <TabsTrigger value="missions">Edit Missions</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="management">Management</TabsTrigger>
-            <TabsTrigger value="session">Session</TabsTrigger>
+            <TabsTrigger value="management">Staff & Bunks</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="public">
+            <PublicDashboard />
+          </TabsContent>
 
           <TabsContent value="reports">
             <AdminReportDashboard />
@@ -110,40 +161,27 @@ const AdminDashboard = () => {
             <AdminSubmissionsManagement />
           </TabsContent>
 
+          <TabsContent value="campers">
+            <CamperManagement />
+          </TabsContent>
+
+          <TabsContent value="missions">
+            <MissionManagement />
+          </TabsContent>
+
           <TabsContent value="analytics">
             <AdminAnalytics />
           </TabsContent>
 
           <TabsContent value="settings">
-            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-              <CardHeader>
-                <CardTitle>Admin Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Change Password</h3>
-                  <p className="text-sm text-gray-500">Update your admin password for enhanced security.</p>
-                  <Settings className="h-5 w-5 text-gray-500" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Set Daily Required Missions</h3>
-                  <p className="text-sm text-gray-500">Configure the number of missions required for campers daily.</p>
-                  <Calendar className="h-5 w-5 text-gray-500" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">View Analytics</h3>
-                  <p className="text-sm text-gray-500">Access comprehensive analytics and reports.</p>
-                  <BarChart3 className="h-5 w-5 text-gray-500" />
-                </div>
-              </CardContent>
-            </Card>
+            <AdminSettings />
           </TabsContent>
 
           <TabsContent value="management">
             <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
-                  <span>Staff Management</span>
+                  <span>Staff & Bunk Management</span>
                   <Button onClick={() => setShowBunkManagement(true)} size="sm">
                     Manage Bunks
                   </Button>
@@ -153,10 +191,6 @@ const AdminDashboard = () => {
                 <StaffManagement />
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="session">
-            <SessionManagement />
           </TabsContent>
         </Tabs>
       </main>
