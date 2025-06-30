@@ -1,12 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CamperSelector from '@/components/CamperSelector';
-import { CAMP_DATA } from '@/data/campData';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, User } from 'lucide-react';
+import { MasterData } from '@/utils/masterDataStorage';
 
 const CamperLogin = () => {
   const navigate = useNavigate();
   const [selectedBunkId, setSelectedBunkId] = useState<string>('');
+  const [selectedCamper, setSelectedCamper] = useState<string>('');
+  const [accessCode, setAccessCode] = useState<string>('');
+  const [campers, setCampers] = useState<any[]>([]);
 
   useEffect(() => {
     console.log('CamperLogin - checking localStorage...');
@@ -18,24 +25,40 @@ const CamperLogin = () => {
       navigate('/');
       return;
     }
+    
     setSelectedBunkId(bunkId);
+    
+    // Get campers for this bunk from MasterData
+    const allProfiles = MasterData.getAllCamperProfiles();
+    const bunkCampers = allProfiles.filter(profile => profile.bunkId === bunkId);
+    setCampers(bunkCampers);
   }, [navigate]);
 
   const handleCamperSelect = (camperId: string) => {
-    console.log('Camper selected:', camperId, 'from bunk:', selectedBunkId);
+    setSelectedCamper(camperId);
+  };
+
+  const handleLogin = () => {
+    if (!selectedCamper || !accessCode) {
+      return;
+    }
+
+    // Get the camper profile to verify the code
+    const camperProfile = MasterData.getCamperProfile(selectedCamper);
     
-    const bunk = CAMP_DATA.find(b => b.id === selectedBunkId);
-    const camper = bunk?.campers.find(c => c.id === camperId);
-    
-    if (camper) {
-      console.log('Found camper:', camper);
-      // Use consistent localStorage keys
-      localStorage.setItem('selectedCamper', camperId);
+    if (!camperProfile) {
+      alert('Camper not found!');
+      return;
+    }
+
+    // For now, accept the camper's actual code or any 4-digit code for testing
+    if (accessCode === camperProfile.code || accessCode.length === 4) {
+      console.log('Camper logged in:', selectedCamper);
+      localStorage.setItem('selectedCamper', selectedCamper);
       localStorage.setItem('selectedBunk', selectedBunkId);
-      console.log('Navigating to camper dashboard...');
       navigate('/camper');
     } else {
-      console.error('Camper not found!', { camperId, selectedBunkId, bunk, camper });
+      alert('Incorrect access code. Please try again or use any 4-digit code for testing.');
     }
   };
 
@@ -48,12 +71,84 @@ const CamperLogin = () => {
     return <div>Loading...</div>;
   }
 
+  const selectedBunk = campers.length > 0 ? campers[0].bunkName : '';
+
   return (
-    <CamperSelector
-      bunkId={selectedBunkId}
-      onSelectCamper={handleCamperSelect}
-      onBack={handleBack}
-    />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900">בחר את השם שלך</h1>
+          <h2 className="text-2xl font-semibold text-blue-600">Select Your Name</h2>
+          <p className="text-gray-600">Choose your name from Bunk {selectedBunk}</p>
+        </div>
+
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Bunk {selectedBunk} Campers</span>
+              <Button variant="outline" size="sm" onClick={handleBack}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </CardTitle>
+            <CardDescription>Select your name and enter your access code</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Your Name</Label>
+              <div className="grid gap-2 max-h-48 overflow-y-auto">
+                {campers.map((camper) => (
+                  <button
+                    key={camper.id}
+                    onClick={() => handleCamperSelect(camper.id)}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 text-left hover:scale-105 ${
+                      selectedCamper === camper.id
+                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-blue-100">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-900">{camper.name}</span>
+                        <div className="text-xs text-gray-500">Code: {camper.code}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {selectedCamper && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="space-y-2">
+                  <Label htmlFor="accessCode">Access Code</Label>
+                  <Input
+                    id="accessCode"
+                    type="password"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    placeholder="Enter your access code"
+                    maxLength={6}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Enter your personal code shown above, or any 4-digit code for testing
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleLogin}
+                  className="w-full bg-blue-600 hover:bg-blue-700 transition-colors"
+                  disabled={!selectedCamper || accessCode.length < 4}
+                >
+                  Enter Mission Dashboard
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, User } from 'lucide-react';
-import { CAMP_DATA, type Camper } from '@/data/campData';
+import { MasterData } from '@/utils/masterDataStorage';
 
 interface CamperSelectorProps {
   bunkId: string;
@@ -17,15 +17,28 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
   const [selectedCamper, setSelectedCamper] = useState<string>('');
   const [accessCode, setAccessCode] = useState<string>('');
 
-  const bunk = CAMP_DATA.find(b => b.id === bunkId);
-  const campers = bunk?.campers || [];
+  // Get campers from MasterData
+  const allProfiles = MasterData.getAllCamperProfiles();
+  const campers = allProfiles.filter(profile => profile.bunkId === bunkId);
+  const bunkName = campers.length > 0 ? campers[0].bunkName : '';
 
   const handleLogin = () => {
-    if (selectedCamper && accessCode) {
-      // For simulation, accept any 4-digit code
-      if (accessCode.length === 4) {
-        onSelectCamper(selectedCamper);
-      }
+    if (!selectedCamper || !accessCode) {
+      return;
+    }
+
+    const camperProfile = MasterData.getCamperProfile(selectedCamper);
+    
+    if (!camperProfile) {
+      alert('Camper not found!');
+      return;
+    }
+
+    // Accept the camper's actual code or any 4-digit code for testing
+    if (accessCode === camperProfile.code || accessCode.length === 4) {
+      onSelectCamper(selectedCamper);
+    } else {
+      alert('Incorrect access code. Please try again or use any 4-digit code for testing.');
     }
   };
 
@@ -35,13 +48,13 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">בחר את השם שלך</h1>
           <h2 className="text-2xl font-semibold text-blue-600">Select Your Name</h2>
-          <p className="text-gray-600">Choose your name from Bunk {bunk?.displayName}</p>
+          <p className="text-gray-600">Choose your name from Bunk {bunkName}</p>
         </div>
 
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Bunk {bunk?.displayName} Campers</span>
+              <span>Bunk {bunkName} Campers</span>
               <Button variant="outline" size="sm" onClick={onBack}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -52,7 +65,7 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
             <div className="space-y-2">
               <Label>Select Your Name</Label>
               <div className="grid gap-2 max-h-48 overflow-y-auto">
-                {campers.map((camper: Camper) => (
+                {campers.map((camper) => (
                   <button
                     key={camper.id}
                     onClick={() => setSelectedCamper(camper.id)}
@@ -66,7 +79,10 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
                       <div className="p-2 rounded-lg bg-blue-100">
                         <User className="h-4 w-4 text-blue-600" />
                       </div>
-                      <span className="font-medium text-gray-900">{camper.name}</span>
+                      <div>
+                        <span className="font-medium text-gray-900">{camper.name}</span>
+                        <div className="text-xs text-gray-500">Code: {camper.code}</div>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -82,17 +98,17 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
                     type="password"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
-                    placeholder="Enter your 4-digit code"
-                    maxLength={4}
+                    placeholder="Enter your access code"
+                    maxLength={6}
                   />
                   <p className="text-xs text-gray-500">
-                    Enter any 4-digit code for testing
+                    Enter your personal code shown above, or any 4-digit code for testing
                   </p>
                 </div>
                 <Button 
                   onClick={handleLogin}
                   className="w-full bg-blue-600 hover:bg-blue-700 transition-colors"
-                  disabled={!selectedCamper || accessCode.length !== 4}
+                  disabled={!selectedCamper || accessCode.length < 4}
                 >
                   Enter Mission Dashboard
                 </Button>

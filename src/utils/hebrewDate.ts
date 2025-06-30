@@ -20,49 +20,12 @@ const HEBREW_NUMBERS: { [key: number]: string } = {
 // Hebrew days of week
 const HEBREW_DAYS = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'שבת קודש'];
 
+// Get current Hebrew year (fixed for camp period)
+const CURRENT_HEBREW_YEAR = 'תשפ"ה';
+
 export function getCurrentHebrewDate(): HebrewDate {
   const now = new Date();
-  
-  // Summer camp period mapping (June-August to Hebrew months)
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
-  
-  let hebrewMonth: string;
-  let hebrewDay: number;
-  
-  // Map Gregorian summer months to Hebrew months
-  if (month === 6) {
-    hebrewMonth = 'סיון';
-    hebrewDay = day + 15; // Approximate offset for camp period
-  } else if (month === 7) {
-    hebrewMonth = 'תמוז';
-    hebrewDay = day;
-  } else if (month === 8) {
-    hebrewMonth = 'אב';
-    hebrewDay = day;
-  } else if (month === 9) {
-    hebrewMonth = 'אלול';
-    hebrewDay = day;
-  } else {
-    // Default for other months
-    hebrewMonth = 'תמוז'; // Default to Tammuz for camp period
-    hebrewDay = day;
-  }
-  
-  // Ensure day doesn't exceed 29 (Hebrew months are 29-30 days)
-  if (hebrewDay > 29) hebrewDay = 29;
-  
-  const hebrewDayStr = HEBREW_NUMBERS[hebrewDay] || hebrewDay.toString();
-  const hebrewText = `${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
-  
-  const english = now.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  return { hebrew: hebrewText, english };
+  return getHebrewDateForDate(now);
 }
 
 export function getHebrewDateForDate(date: Date): HebrewDate {
@@ -73,27 +36,27 @@ export function getHebrewDateForDate(date: Date): HebrewDate {
   let hebrewMonth: string;
   let hebrewDay: number;
   
-  if (month === 6) {
+  // Map Gregorian summer months to Hebrew months for camp period
+  if (month === 6) { // June
     hebrewMonth = 'סיון';
-    hebrewDay = day + 15;
-  } else if (month === 7) {
+    hebrewDay = Math.min(day + 15, 29); // Sivan offset
+  } else if (month === 7) { // July
     hebrewMonth = 'תמוז';
-    hebrewDay = day;
-  } else if (month === 8) {
+    hebrewDay = Math.min(day, 29);
+  } else if (month === 8) { // August
     hebrewMonth = 'אב';
-    hebrewDay = day;
-  } else if (month === 9) {
+    hebrewDay = Math.min(day, 29);
+  } else if (month === 9) { // September
     hebrewMonth = 'אלול';
-    hebrewDay = day;
+    hebrewDay = Math.min(day, 29);
   } else {
+    // Default for other months (camp period focus)
     hebrewMonth = 'תמוז';
-    hebrewDay = day;
+    hebrewDay = Math.min(day, 29);
   }
   
-  if (hebrewDay > 29) hebrewDay = 29;
-  
   const hebrewDayStr = HEBREW_NUMBERS[hebrewDay] || hebrewDay.toString();
-  const hebrewText = `${dayOfWeek}, ${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
+  const hebrewText = `${dayOfWeek}, ${hebrewDayStr} ${hebrewMonth} ${CURRENT_HEBREW_YEAR}`;
   
   const english = date.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -105,8 +68,18 @@ export function getHebrewDateForDate(date: Date): HebrewDate {
   return { hebrew: hebrewText, english };
 }
 
+export function formatHebrewDate(date: Date): string {
+  const { hebrew } = getHebrewDateForDate(date);
+  return hebrew;
+}
+
+export function getTodayHebrewDate(): string {
+  return formatHebrewDate(new Date());
+}
+
 export function getSessionInfo() {
-  const { session, startDate } = getCurrentSessionData();
+  const session = parseInt(localStorage.getItem('current_session') || '0');
+  const startDate = localStorage.getItem('session_start_date');
   
   if (session === 0) {
     return {
@@ -132,41 +105,4 @@ export function getSessionInfo() {
     hebrew: `מפגש ${session}, שבוע ${currentWeek}, יום ${currentDay}`,
     english: `Session ${session}, Week ${currentWeek}, Day ${currentDay}`
   };
-}
-
-export function formatHebrewDate(date: Date): string {
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  
-  let hebrewMonth: string;
-  let hebrewDay: number;
-  
-  if (month === 6) {
-    hebrewMonth = 'סיון';
-    hebrewDay = day + 15;
-  } else if (month === 7) {
-    hebrewMonth = 'תמוז';
-    hebrewDay = day;
-  } else if (month === 8) {
-    hebrewMonth = 'אב';
-    hebrewDay = day;
-  } else if (month === 9) {
-    hebrewMonth = 'אלול';
-    hebrewDay = day;
-  } else {
-    hebrewMonth = 'תמוז';
-    hebrewDay = day;
-  }
-  
-  if (hebrewDay > 29) hebrewDay = 29;
-  
-  const hebrewDayStr = HEBREW_NUMBERS[hebrewDay] || hebrewDay.toString();
-  return `${hebrewDayStr} ${hebrewMonth} תשפ"ה`;
-}
-
-// Helper function to get current session data
-function getCurrentSessionData(): { session: number; startDate: string | null } {
-  const session = parseInt(localStorage.getItem('current_session') || '0');
-  const startDate = localStorage.getItem('session_start_date');
-  return { session, startDate };
 }

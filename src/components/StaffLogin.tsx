@@ -20,18 +20,21 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
   const allStaff = CAMP_DATA.flatMap(bunk => 
     bunk.staff.map(staff => ({
       ...staff,
-      bunkName: bunk.displayName
+      bunkName: bunk.displayName,
+      bunkId: bunk.id
     }))
   );
 
   const handleLogin = () => {
     if (selectedStaff && accessCode) {
-      // For simulation, accept any 4-digit code
+      // Accept any 4-digit code for testing
       if (accessCode.length === 4) {
         const staff = allStaff.find(s => s.id === selectedStaff);
         if (staff) {
           onLogin(selectedStaff, staff.bunkId);
         }
+      } else {
+        alert('Please enter a 4-digit access code');
       }
     }
   };

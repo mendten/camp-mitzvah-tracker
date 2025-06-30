@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { DataStorage } from '@/utils/dataStorage';
+import { MasterData } from '@/utils/masterDataStorage';
 import { DEFAULT_MISSIONS } from '@/data/campData';
 
 interface CamperCalendarProps {
@@ -20,23 +20,35 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
   // Get real completion data for any date
   const getCompletionDataForDate = (date: Date) => {
     const dateKey = date.toISOString().split('T')[0];
-    const isToday = dateKey === DataStorage.getTodayDateString();
+    const todayKey = MasterData.getTodayString();
     
-    if (isToday) {
-      // Use real data for today
-      const status = DataStorage.getCamperTodayStatus(camperId);
-      const todayMissions = DataStorage.getCamperTodayMissions(camperId);
-      return {
-        completed: status.submittedCount,
-        total: missions.length,
-        missions: todayMissions,
-        status: status.status,
-        qualified: status.qualified
-      };
+    if (dateKey === todayKey) {
+      // Use MasterData for today
+      const todaySubmission = MasterData.getCamperTodaySubmission(camperId);
+      const workingMissions = MasterData.getCamperWorkingMissions(camperId);
+      const dailyRequired = MasterData.getDailyRequired();
+      
+      if (todaySubmission) {
+        return {
+          completed: todaySubmission.missions.length,
+          total: missions.length,
+          missions: todaySubmission.missions,
+          status: todaySubmission.status,
+          qualified: todaySubmission.missions.length >= dailyRequired
+        };
+      } else {
+        return {
+          completed: workingMissions.length,
+          total: missions.length,
+          missions: workingMissions,
+          status: 'working' as const,
+          qualified: workingMissions.length >= dailyRequired
+        };
+      }
     } else {
-      // Check submission history for other dates
-      const history = DataStorage.getSubmissionHistory(camperId);
-      const daySubmission = history.find(h => h.date === dateKey);
+      // Check historical data
+      const allSubmissions = MasterData.getAllSubmissions();
+      const daySubmission = allSubmissions.find(s => s.camperId === camperId && s.date === dateKey);
       
       if (daySubmission) {
         return {
@@ -44,7 +56,7 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
           total: missions.length,
           missions: daySubmission.missions,
           status: daySubmission.status,
-          qualified: daySubmission.missions.length >= DataStorage.getDailyRequired()
+          qualified: daySubmission.missions.length >= MasterData.getDailyRequired()
         };
       }
       
@@ -57,16 +69,6 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
         qualified: false
       };
     }
-  };
-
-  const getDayColor = (date: Date) => {
-    const data = getCompletionDataForDate(date);
-    
-    if (data.status === 'approved') return 'bg-green-500 text-white';
-    if (data.status === 'pending') return 'bg-yellow-500 text-white';
-    if (data.status === 'edit_requested') return 'bg-blue-500 text-white';
-    if (data.completed > 0) return 'bg-orange-300';
-    return '';
   };
 
   const selectedDateData = selectedDate ? getCompletionDataForDate(selectedDate) : null;
@@ -111,9 +113,9 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
                 const data = getCompletionDataForDate(date);
                 return data.status === 'approved';
               },
-              pending: (date) => {
+              submitted: (date) => {
                 const data = getCompletionDataForDate(date);
-                return data.status === 'pending';
+                return data.status === 'submitted';
               },
               editRequested: (date) => {
                 const data = getCompletionDataForDate(date);
@@ -121,12 +123,12 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
               },
               partial: (date) => {
                 const data = getCompletionDataForDate(date);
-                return data.completed > 0 && data.status === 'not_submitted';
+                return data.completed > 0 && data.status === 'working';
               }
             }}
             modifiersStyles={{
               approved: { backgroundColor: '#10b981', color: 'white' },
-              pending: { backgroundColor: '#f59e0b', color: 'white' },
+              submitted: { backgroundColor: '#f59e0b', color: 'white' },
               editRequested: { backgroundColor: '#3b82f6', color: 'white' },
               partial: { backgroundColor: '#fb923c', color: 'white' }
             }}
@@ -138,7 +140,7 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-              <span>Pending</span>
+              <span>Submitted</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-blue-500 rounded"></div>
@@ -146,7 +148,7 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-orange-400 rounded"></div>
-              <span>Partial</span>
+              <span>Working</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-gray-300 rounded"></div>
@@ -187,13 +189,15 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
                 <div className="mt-2">
                   <span className={`inline-block px-2 py-1 rounded text-sm font-medium ${
                     selectedDateData.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    selectedDateData.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedDateData.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
                     selectedDateData.status === 'edit_requested' ? 'bg-blue-100 text-blue-800' :
+                    selectedDateData.status === 'working' ? 'bg-orange-100 text-orange-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     {selectedDateData.status === 'not_submitted' ? 'Not Submitted' :
-                     selectedDateData.status === 'pending' ? 'Pending Approval' :
+                     selectedDateData.status === 'submitted' ? 'Pending Approval' :
                      selectedDateData.status === 'edit_requested' ? 'Edit Requested' :
+                     selectedDateData.status === 'working' ? 'Working On' :
                      'Approved'}
                   </span>
                 </div>

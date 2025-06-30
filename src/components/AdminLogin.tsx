@@ -18,11 +18,12 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onBack }) => {
 
   const handleLogin = () => {
     const adminPassword = MasterData.getAdminPassword();
-    // For simulation, accept admin/admin123 or the stored admin password
+    
+    // Accept admin/admin123 or admin/stored_password
     if (username === 'admin' && (password === 'admin123' || password === adminPassword)) {
       onLogin();
     } else {
-      alert('Incorrect credentials');
+      alert('Incorrect credentials. Use username: admin, password: admin123');
     }
   };
 
@@ -65,10 +66,12 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onBack }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter admin password"
+                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
               />
             </div>
             <p className="text-xs text-gray-500">
-              For testing: username "admin", password "admin123"
+              Username: <strong>admin</strong><br />
+              Password: <strong>admin123</strong>
             </p>
             <Button 
               onClick={handleLogin}

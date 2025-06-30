@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
-import { CAMP_DATA } from '@/data/campData';
+import { MasterData } from '@/utils/masterDataStorage';
 import { formatHebrewDate, getHebrewDateForDate } from '@/utils/hebrewDate';
 
 interface EnhancedCalendarProps {
@@ -40,40 +40,34 @@ const EnhancedCalendar: React.FC<EnhancedCalendarProps> = ({
 
   const getDayData = (date: Date) => {
     if (isAdminView) {
-      // For admin view, show camp-wide statistics
-      const totalCampers = CAMP_DATA.reduce((sum, bunk) => sum + bunk.campers.length, 0);
-      let qualifiedCampers = 0;
-      let totalCompletions = 0;
-
-      CAMP_DATA.forEach(bunk => {
-        bunk.campers.forEach(camper => {
-          const approved = JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]');
-          const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
-          
-          if (approved.length >= dailyRequired) {
-            qualifiedCampers++;
-          }
-          totalCompletions += approved.length;
-        });
-      });
+      // For admin view, show camp-wide statistics using MasterData
+      const allCampers = MasterData.getAllCampersWithStatus();
+      const totalCampers = allCampers.length;
+      const qualifiedCampers = allCampers.filter(c => c.isQualified).length;
+      const totalCompletions = allCampers.reduce((sum, c) => sum + c.missionCount, 0);
 
       return {
         qualifiedCampers,
         totalCampers,
         totalCompletions,
-        qualificationRate: Math.round((qualifiedCampers / totalCampers) * 100)
+        qualificationRate: totalCampers > 0 ? Math.round((qualifiedCampers / totalCampers) * 100) : 0
       };
     } else {
       // For individual camper view
-      const dateKey = date.toISOString().split('T')[0];
-      const dayCompletions = Array.from(completedMissions).filter(missionId => {
-        const completionDate = localStorage.getItem(`mission_${missionId}_completed_${camperId}`);
-        return completionDate && completionDate.startsWith(dateKey);
-      });
+      const todaySubmission = MasterData.getCamperTodaySubmission(camperId);
+      const workingMissions = MasterData.getCamperWorkingMissions(camperId);
+      const dailyRequired = MasterData.getDailyRequired();
+      
+      let completions = 0;
+      if (todaySubmission) {
+        completions = todaySubmission.missions.length;
+      } else {
+        completions = workingMissions.length;
+      }
 
       return {
-        completions: dayCompletions.length,
-        isQualified: dayCompletions.length >= parseInt(localStorage.getItem('mission_daily_required') || '3')
+        completions,
+        isQualified: completions >= dailyRequired
       };
     }
   };
@@ -162,6 +156,11 @@ const EnhancedCalendar: React.FC<EnhancedCalendarProps> = ({
     calendarDays.push(renderCalendarDay(day));
   }
 
+  const allCampers = MasterData.getAllCampersWithStatus();
+  const totalCampers = allCampers.length;
+  const dailyRequired = MasterData.getDailyRequired();
+  const currentSession = localStorage.getItem('current_session') || '0';
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -209,9 +208,7 @@ const EnhancedCalendar: React.FC<EnhancedCalendarProps> = ({
           <CardContent className="p-4">
             <div className="grid md:grid-cols-4 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {CAMP_DATA.reduce((sum, bunk) => sum + bunk.campers.length, 0)}
-                </div>
+                <div className="text-2xl font-bold text-blue-600">{totalCampers}</div>
                 <div className="text-sm text-gray-600">Total Campers</div>
               </div>
               <div>
@@ -221,15 +218,11 @@ const EnhancedCalendar: React.FC<EnhancedCalendarProps> = ({
                 <div className="text-sm text-gray-600">Active Missions</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {localStorage.getItem('mission_daily_required') || '3'}
-                </div>
+                <div className="text-2xl font-bold text-purple-600">{dailyRequired}</div>
                 <div className="text-sm text-gray-600">Daily Required</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-orange-600">
-                  Session {localStorage.getItem('current_session') || '0'}
-                </div>
+                <div className="text-2xl font-bold text-orange-600">Session {currentSession}</div>
                 <div className="text-sm text-gray-600">Current Session</div>
               </div>
             </div>
