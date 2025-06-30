@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import MissionCard from '@/components/MissionCard';
 import { MasterData } from '@/utils/masterDataStorage';
-import { formatHebrewDate } from '@/utils/hebrewCalendar';
+import { formatHebrewDate } from '@/utils/hebrewDate';
 
 const NewCamperDashboard = () => {
   const navigate = useNavigate();
