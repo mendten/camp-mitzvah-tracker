@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Users, Target, Calendar, Award, AlertCircle } from 'lucide-react';
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
-import { DataStorage } from '@/utils/dataStorage';
+import { MasterData } from '@/utils/masterDataStorage';
 
 const AdminAnalytics: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
@@ -19,13 +19,17 @@ const AdminAnalytics: React.FC = () => {
   const generateAnalytics = () => {
     const totalCampers = CAMP_DATA.reduce((sum, bunk) => sum + bunk.campers.length, 0);
     const activeMissions = DEFAULT_MISSIONS.filter(m => m.isActive);
-    const dailyRequired = DataStorage.getDailyRequired();
+    const dailyRequired = MasterData.getDailyRequired();
 
+    // Get all campers with their status from MasterData
+    const allCampersWithStatus = MasterData.getAllCampersWithStatus();
+    
     // Calculate camp-wide statistics
-    let qualifiedToday = 0;
-    let totalSubmissions = 0;
-    let pendingApprovals = 0;
-    let editRequests = 0;
+    const qualifiedToday = allCampersWithStatus.filter(c => c.isQualified).length;
+    const totalSubmissions = allCampersWithStatus.filter(c => c.todaySubmission).length;
+    const pendingApprovals = allCampersWithStatus.filter(c => c.status === 'submitted' || c.status === 'edit_requested').length;
+    const editRequests = allCampersWithStatus.filter(c => c.status === 'edit_requested').length;
+
     const bunkStats: any[] = [];
     const missionStats: any[] = [];
 
@@ -35,44 +39,34 @@ const AdminAnalytics: React.FC = () => {
       missionCompletions[mission.id] = 0;
     });
 
-    CAMP_DATA.forEach(bunk => {
-      let bunkQualified = 0;
-      let bunkSubmissions = 0;
-      let bunkPending = 0;
+    // Group campers by bunk and calculate stats
+    const campersByBunk = CAMP_DATA.map(bunk => {
+      const bunkCampers = allCampersWithStatus.filter(c => c.bunkId === bunk.id);
+      const bunkQualified = bunkCampers.filter(c => c.isQualified).length;
+      const bunkSubmissions = bunkCampers.filter(c => c.todaySubmission).length;
+      const bunkPending = bunkCampers.filter(c => c.status === 'submitted' || c.status === 'edit_requested').length;
 
-      bunk.campers.forEach(camper => {
-        const status = DataStorage.getCamperTodayStatus(camper.id);
-        
-        if (status.qualified) qualifiedToday++;
-        if (status.status === 'pending') {
-          pendingApprovals++;
-          bunkPending++;
-        }
-        if (status.status === 'edit_requested') editRequests++;
-        if (status.submittedCount > 0) {
-          totalSubmissions++;
-          bunkSubmissions++;
-        }
-        if (status.qualified) bunkQualified++;
-
-        // Track mission completions
-        const todayMissions = DataStorage.getCamperTodayMissions(camper.id);
-        todayMissions.forEach(missionId => {
+      // Count mission completions for this bunk
+      bunkCampers.forEach(camper => {
+        const missions = camper.todaySubmission ? camper.todaySubmission.missions : camper.workingMissions;
+        missions.forEach((missionId: string) => {
           if (missionCompletions[missionId] !== undefined) {
             missionCompletions[missionId]++;
           }
         });
       });
 
-      bunkStats.push({
+      return {
         name: bunk.displayName,
         total: bunk.campers.length,
         qualified: bunkQualified,
         submissions: bunkSubmissions,
         pending: bunkPending,
         percentage: Math.round((bunkQualified / bunk.campers.length) * 100)
-      });
+      };
     });
+
+    bunkStats.push(...campersByBunk);
 
     // Convert mission completions to chart data
     activeMissions.forEach(mission => {

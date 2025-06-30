@@ -37,7 +37,7 @@ const Index = () => {
                 Submit your daily missions and track your progress
               </p>
               <Button 
-                onClick={() => navigate('/camper-login')}
+                onClick={() => navigate('/bunk-selection')}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
                 Camper Login

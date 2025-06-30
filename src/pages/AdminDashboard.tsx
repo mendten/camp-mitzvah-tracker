@@ -24,6 +24,7 @@ const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [showBunkManagement, setShowBunkManagement] = useState(false);
+  const [activeTab, setActiveTab] = useState('public');
   const hebrewDate = getCurrentHebrewDate();
   const sessionInfo = getSessionInfo();
 
@@ -58,6 +59,24 @@ const AdminDashboard = () => {
   const pendingSubmissions = MasterData.getPendingSubmissions();
   const qualifiedToday = allCampersWithStatus.filter(c => c.isQualified).length;
   const totalSubmissions = MasterData.getAllSubmissions().length;
+
+  // Card click handlers
+  const handleCardClick = (action: string) => {
+    switch (action) {
+      case 'campers':
+        setActiveTab('reports');
+        break;
+      case 'qualified':
+        setActiveTab('reports');
+        break;
+      case 'pending':
+        setActiveTab('submissions');
+        break;
+      case 'submissions':
+        setActiveTab('submissions');
+        break;
+    }
+  };
 
   if (!isAuthenticated) {
     return <AdminLogin onLogin={handleLogin} onBack={handleBackToHome} />;
@@ -102,42 +121,58 @@ const AdminDashboard = () => {
       </header>
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Quick Stats Overview */}
+        {/* Quick Stats Overview - Now Clickable */}
         <div className="grid md:grid-cols-4 gap-4">
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
+            onClick={() => handleCardClick('campers')}
+          >
             <CardContent className="p-6 text-center">
               <Users className="h-12 w-12 mx-auto text-blue-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">{allCampersWithStatus.length}</div>
               <p className="text-gray-600">Total Campers</p>
+              <p className="text-xs text-blue-600 mt-1">Click to view details</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
+            onClick={() => handleCardClick('qualified')}
+          >
             <CardContent className="p-6 text-center">
               <Calendar className="h-12 w-12 mx-auto text-green-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">{qualifiedToday}</div>
               <p className="text-gray-600">Qualified Today</p>
+              <p className="text-xs text-green-600 mt-1">Click to view qualified</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
+            onClick={() => handleCardClick('pending')}
+          >
             <CardContent className="p-6 text-center">
               <BarChart3 className="h-12 w-12 mx-auto text-purple-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">{pendingSubmissions.length}</div>
               <p className="text-gray-600">Pending Approvals</p>
+              <p className="text-xs text-purple-600 mt-1">Click to approve</p>
             </CardContent>
           </Card>
           
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow">
+          <Card 
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
+            onClick={() => handleCardClick('submissions')}
+          >
             <CardContent className="p-6 text-center">
               <Shield className="h-12 w-12 mx-auto text-orange-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">{totalSubmissions}</div>
               <p className="text-gray-600">Total Submissions</p>
+              <p className="text-xs text-orange-600 mt-1">Click to view history</p>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="public" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
