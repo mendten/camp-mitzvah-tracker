@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Users, Shield, UserCheck, BarChart3, Calendar } from 'lucide-react';
 import PublicDashboard from '@/components/PublicDashboard';
-import { getCurrentHebrewDate } from '@/utils/hebrewDate';
+import { getCurrentProperHebrewDate } from '@/utils/properHebrewDate';
 
 const Index = () => {
   const navigate = useNavigate();
-  const hebrewDate = getCurrentHebrewDate();
+  const hebrewDate = getCurrentProperHebrewDate();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">

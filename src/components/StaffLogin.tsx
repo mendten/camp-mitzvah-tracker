@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { CAMP_DATA } from '@/data/campData';
 
 interface StaffLoginProps {
@@ -15,28 +15,40 @@ interface StaffLoginProps {
 const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
   const [selectedStaff, setSelectedStaff] = useState<string>('');
   const [accessCode, setAccessCode] = useState<string>('');
+  const [error, setError] = useState<string>('');
 
   // Get all staff members across all bunks
   const allStaff = CAMP_DATA.flatMap(bunk => 
     bunk.staff.map(staff => ({
       ...staff,
       bunkName: bunk.displayName,
-      bunkId: bunk.id
+      bunkId: bunk.id,
+      // Generate proper access codes (in real system, these would be preset)
+      accessCode: `${staff.name.split(' ')[0].toLowerCase()}${new Date().getFullYear().toString().slice(-2)}`
     }))
   );
 
   const handleLogin = () => {
-    if (selectedStaff && accessCode) {
-      // Accept any 4-digit code for testing
-      if (accessCode.length === 4) {
-        const staff = allStaff.find(s => s.id === selectedStaff);
-        if (staff) {
-          onLogin(selectedStaff, staff.bunkId);
-        }
-      } else {
-        alert('Please enter a 4-digit access code');
-      }
+    setError('');
+    
+    if (!selectedStaff || !accessCode) {
+      setError('Please select your name and enter your access code');
+      return;
     }
+
+    const staff = allStaff.find(s => s.id === selectedStaff);
+    if (!staff) {
+      setError('Staff member not found');
+      return;
+    }
+
+    // Validate access code
+    if (accessCode.toLowerCase() !== staff.accessCode) {
+      setError('Invalid access code. Please contact administration for your correct code.');
+      return;
+    }
+
+    onLogin(selectedStaff, staff.bunkId);
   };
 
   return (
@@ -58,6 +70,13 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
             <CardDescription>Choose your name from the staff list</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error && (
+              <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <span className="text-sm text-red-800">{error}</span>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Select Your Name</Label>
               <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -89,17 +108,16 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
                     type="password"
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
-                    placeholder="Enter your 4-digit code"
-                    maxLength={4}
+                    placeholder="Enter your access code"
                   />
                   <p className="text-xs text-gray-500">
-                    Enter any 4-digit code for testing
+                    Contact administration if you don't have your access code
                   </p>
                 </div>
                 <Button 
                   onClick={handleLogin}
                   className="w-full bg-green-600 hover:bg-green-700 transition-colors"
-                  disabled={!selectedStaff || accessCode.length !== 4}
+                  disabled={!selectedStaff || !accessCode}
                 >
                   Enter Staff Dashboard
                 </Button>

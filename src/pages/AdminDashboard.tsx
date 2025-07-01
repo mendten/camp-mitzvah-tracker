@@ -16,7 +16,8 @@ import CamperManagement from '@/components/CamperManagement';
 import MissionManagement from '@/components/MissionManagement';
 import AdminSettings from '@/components/AdminSettings';
 import PublicDashboard from '@/components/PublicDashboard';
-import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
+import AdminCardModal from '@/components/AdminCardModal';
+import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrewDate';
 import { MasterData } from '@/utils/masterDataStorage';
 
 const AdminDashboard = () => {
@@ -25,7 +26,8 @@ const AdminDashboard = () => {
   const [adminPassword, setAdminPassword] = useState('');
   const [showBunkManagement, setShowBunkManagement] = useState(false);
   const [activeTab, setActiveTab] = useState('public');
-  const hebrewDate = getCurrentHebrewDate();
+  const [modalType, setModalType] = useState<'campers' | 'qualified' | 'pending' | 'submissions' | null>(null);
+  const hebrewDate = getCurrentProperHebrewDate();
   const sessionInfo = getSessionInfo();
 
   useEffect(() => {
@@ -60,22 +62,9 @@ const AdminDashboard = () => {
   const qualifiedToday = allCampersWithStatus.filter(c => c.isQualified).length;
   const totalSubmissions = MasterData.getAllSubmissions().length;
 
-  // Card click handlers
-  const handleCardClick = (action: string) => {
-    switch (action) {
-      case 'campers':
-        setActiveTab('reports');
-        break;
-      case 'qualified':
-        setActiveTab('reports');
-        break;
-      case 'pending':
-        setActiveTab('submissions');
-        break;
-      case 'submissions':
-        setActiveTab('submissions');
-        break;
-    }
+  // Card click handlers - now open modals instead of changing tabs
+  const handleCardClick = (action: 'campers' | 'qualified' | 'pending' | 'submissions') => {
+    setModalType(action);
   };
 
   if (!isAuthenticated) {
@@ -121,7 +110,7 @@ const AdminDashboard = () => {
       </header>
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Quick Stats Overview - Now Clickable */}
+        {/* Quick Stats Overview - Clickable Cards with Modals */}
         <div className="grid md:grid-cols-4 gap-4">
           <Card 
             className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
@@ -154,8 +143,8 @@ const AdminDashboard = () => {
             <CardContent className="p-6 text-center">
               <BarChart3 className="h-12 w-12 mx-auto text-purple-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">{pendingSubmissions.length}</div>
-              <p className="text-gray-600">Pending Approvals</p>
-              <p className="text-xs text-purple-600 mt-1">Click to approve</p>
+              <p className="text-gray-600">Pending Edit Requests</p>
+              <p className="text-xs text-purple-600 mt-1">Click to review</p>
             </CardContent>
           </Card>
           
@@ -173,10 +162,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="campers">Edit Campers</TabsTrigger>
             <TabsTrigger value="missions">Edit Missions</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -194,6 +184,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="submissions">
             <AdminSubmissionsManagement />
+          </TabsContent>
+
+          <TabsContent value="sessions">
+            <SessionManagement />
           </TabsContent>
 
           <TabsContent value="campers">
@@ -234,6 +228,12 @@ const AdminDashboard = () => {
         isOpen={showBunkManagement}
         onClose={() => setShowBunkManagement(false)}
         bunk={null}
+      />
+
+      <AdminCardModal
+        isOpen={modalType !== null}
+        onClose={() => setModalType(null)}
+        type={modalType || 'campers'}
       />
     </div>
   );

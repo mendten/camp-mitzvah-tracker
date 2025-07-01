@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ const AdminSubmissionsManagement = () => {
   const [submissions, setSubmissions] = useState<CamperSubmission[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<CamperSubmission[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('edit_requested'); // Default to show only edit requests
   const [dateFilter, setDateFilter] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -29,7 +28,16 @@ const AdminSubmissionsManagement = () => {
 
   const loadSubmissions = () => {
     const allSubmissions = MasterData.getAllSubmissions();
-    setSubmissions(allSubmissions.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
+    // Auto-approve all regular submissions that are still 'submitted'
+    allSubmissions.forEach(submission => {
+      if (submission.status === 'submitted' && !submission.editRequestReason) {
+        MasterData.approveSubmission(submission.id, 'Auto-System');
+      }
+    });
+    
+    // Reload after auto-approval
+    const updatedSubmissions = MasterData.getAllSubmissions();
+    setSubmissions(updatedSubmissions.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
   };
 
   const filterSubmissions = () => {
@@ -71,8 +79,8 @@ const AdminSubmissionsManagement = () => {
     MasterData.approveSubmission(submissionId, 'Admin');
     setRefreshKey(prev => prev + 1);
     toast({
-      title: "Submission Approved",
-      description: "The submission has been approved successfully.",
+      title: "Edit Request Approved",
+      description: "The edit request has been approved successfully.",
     });
   };
 
@@ -80,8 +88,8 @@ const AdminSubmissionsManagement = () => {
     MasterData.rejectSubmission(submissionId, 'Admin');
     setRefreshKey(prev => prev + 1);
     toast({
-      title: "Submission Rejected",
-      description: "The submission has been rejected.",
+      title: "Edit Request Rejected",
+      description: "The edit request has been rejected.",
     });
   };
 
@@ -141,7 +149,7 @@ const AdminSubmissionsManagement = () => {
     <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>All Submissions Management</span>
+          <span>Edit Requests Management</span>
           <div className="flex items-center space-x-2">
             <Button onClick={exportSubmissions} size="sm" variant="outline">
               <Download className="h-4 w-4 mr-2" />
@@ -167,10 +175,9 @@ const AdminSubmissionsManagement = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="edit_requested">Edit Requests Only</SelectItem>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="submitted">Submitted</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="edit_requested">Edit Requested</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
@@ -187,8 +194,15 @@ const AdminSubmissionsManagement = () => {
           </Select>
           <div className="flex items-center text-sm text-gray-600">
             <Filter className="h-4 w-4 mr-2" />
-            {filteredSubmissions.length} submissions
+            {filteredSubmissions.length} items
           </div>
+        </div>
+
+        {/* Info Banner */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            <strong>Note:</strong> Regular daily missions are automatically approved. Only edit requests require manual approval.
+          </p>
         </div>
 
         {/* Submissions Table */}
@@ -225,7 +239,7 @@ const AdminSubmissionsManagement = () => {
                     {submission.editRequestReason || '-'}
                   </div>
                   <div className="flex space-x-1">
-                    {(submission.status === 'submitted' || submission.status === 'edit_requested') && (
+                    {submission.status === 'edit_requested' && (
                       <>
                         <Button
                           size="sm"
@@ -245,7 +259,7 @@ const AdminSubmissionsManagement = () => {
                       </>
                     )}
                     {submission.status === 'approved' && (
-                      <Badge className="bg-green-100 text-green-800 text-xs">✓ Done</Badge>
+                      <Badge className="bg-green-100 text-green-800 text-xs">✓ Approved</Badge>
                     )}
                     {submission.status === 'rejected' && (
                       <Badge className="bg-red-100 text-red-800 text-xs">✗ Rejected</Badge>
@@ -256,7 +270,10 @@ const AdminSubmissionsManagement = () => {
 
               {filteredSubmissions.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  No submissions found matching your filters.
+                  {statusFilter === 'edit_requested' 
+                    ? "No edit requests found. Regular submissions are auto-approved."
+                    : "No submissions found matching your filters."
+                  }
                 </div>
               )}
             </div>
