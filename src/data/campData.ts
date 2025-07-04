@@ -37,7 +37,7 @@ export interface SessionConfig {
 
 export const DEFAULT_MISSIONS: Mission[] = [
   { id: 'modeh-ani', title: 'Modeh ani', type: 'prayer', icon: '🌅', isMandatory: true, isActive: true },
-  { id: 'negel-vaaser', title: 'Negel Vaaser', type: 'ritual', icon: '💧', isMandatory: true, isActive: true },
+  { id: 'vaaser', title: 'Vaaser', type: 'ritual', icon: '💧', isMandatory: true, isActive: true },
   { id: 'brachos-krias-shema', title: 'Brachos/Krias Shema in morning', type: 'prayer', icon: '📜', isMandatory: true, isActive: true },
   { id: 'krias-shema-night', title: 'Krias Shema/Chesbon Hanefesh at night', type: 'prayer', icon: '🌙', isMandatory: true, isActive: true },
   { id: 'sleep-yarmulka-tzitzis', title: 'Sleep with yarmulka and tzitzis', type: 'mitzvah', icon: '🛏️', isMandatory: true, isActive: true },
@@ -53,14 +53,14 @@ export const CAMP_DATA: Bunk[] = [
       { id: 'staff_a1', name: 'Mendy Zalmanov', bunkId: 'kevutzah-alef' }
     ],
     campers: [
-      { id: 'camper_a1', name: 'Yoel Bistricer', bunkId: 'kevutzah-alef' },
-      { id: 'camper_a2', name: 'Bentzi Glick', bunkId: 'kevutzah-alef' },
-      { id: 'camper_a3', name: 'Yochanan Homnick', bunkId: 'kevutzah-alef' },
-      { id: 'camper_a4', name: 'Levi Kaplan', bunkId: 'kevutzah-alef' },
-      { id: 'camper_a5', name: 'Simcha Levenson', bunkId: 'kevutzah-alef' },
-      { id: 'camper_a6', name: 'Mendel Lipsker', bunkId: 'kevutzah-alef' },
-      { id: 'camper_a7', name: 'Yisroel Mishulovin', bunkId: 'kevutzah-alef' },
-      { id: 'camper_a8', name: 'Mendy Serebryanski', bunkId: 'kevutzah-alef' }
+      { id: 'camper_a1', name: 'Isaac Abergel', bunkId: 'kevutzah-alef' },
+      { id: 'camper_a2', name: 'Tzvi Abergel', bunkId: 'kevutzah-alef' },
+      { id: 'camper_a3', name: 'Mordy Bloom', bunkId: 'kevutzah-alef' },
+      { id: 'camper_a4', name: 'Mendel Bortunk', bunkId: 'kevutzah-alef' },
+      { id: 'camper_a5', name: 'Avremi Brody', bunkId: 'kevutzah-alef' },
+      { id: 'camper_a6', name: 'Mordy Raksin', bunkId: 'kevutzah-alef' },
+      { id: 'camper_a7', name: 'Yossi Weiss', bunkId: 'kevutzah-alef' },
+      { id: 'camper_a8', name: 'Shimon Myhill', bunkId: 'kevutzah-alef' }
     ]
   },
   {
@@ -71,15 +71,15 @@ export const CAMP_DATA: Bunk[] = [
       { id: 'staff_b1', name: 'Moshe Young', bunkId: 'kevutzah-beis' }
     ],
     campers: [
-      { id: 'camper_b1', name: 'Sholom Ber Barkahn', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b2', name: 'Mendy Blau', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b3', name: 'Zalman Flint', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b4', name: 'Menachem Mendel Goldberg', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b5', name: 'Shneur Zalman Greenberg', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b6', name: 'Mendel Kastel', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b7', name: 'Yehoshua Nochum Plotkin', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b8', name: 'Mendel Ruderman', bunkId: 'kevutzah-beis' },
-      { id: 'camper_b9', name: 'Zalman Spritzer', bunkId: 'kevutzah-beis' }
+      { id: 'camper_b1', name: 'Maor Fellig', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b2', name: 'JJ Fischweicher', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b3', name: 'Zalman Fischweicher', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b4', name: 'Eli Levy', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b5', name: 'Tzvi Margolin', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b6', name: 'Shmuly Shagalov', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b7', name: 'Chaim Silberstein', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b8', name: 'Mendel Weic', bunkId: 'kevutzah-beis' },
+      { id: 'camper_b9', name: 'Ari Wolff', bunkId: 'kevutzah-beis' }
     ]
   },
   {
@@ -87,18 +87,18 @@ export const CAMP_DATA: Bunk[] = [
     name: 'kevutzah-gimmel',
     displayName: 'Kevutzah Gimmel',
     staff: [
-      { id: 'staff_g1', name: 'Nosson oster', bunkId: 'kevutzah-gimmel' }
+      { id: 'staff_g1', name: 'Nosson Oster', bunkId: 'kevutzah-gimmel' }
     ],
     campers: [
-      { id: 'camper_g1', name: 'Mendy Bogomilsky', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g2', name: 'Dovid Schochet', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g3', name: 'Shlomo Goldberg', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g4', name: 'Levi Goldstein', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g5', name: 'Yisroel Greenberg', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g6', name: 'Mordechi Rivkin', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g7', name: 'Moishy Rodkin', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g8', name: 'Shneur Zalman Seltzer', bunkId: 'kevutzah-gimmel' },
-      { id: 'camper_g9', name: 'Velvel Tenenbaum', bunkId: 'kevutzah-gimmel' }
+      { id: 'camper_g1', name: 'Nachman Yosef Altein', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g2', name: 'Dovid Bedrick', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g3', name: 'Yaakov Friedman', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g4', name: 'Yanky Friedman', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g5', name: 'Yehuda Halilyan', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g6', name: 'Nachum Marcus', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g7', name: 'Shaya Naiditch', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g8', name: 'Tzvika Weinbaum', bunkId: 'kevutzah-gimmel' },
+      { id: 'camper_g9', name: 'Yosef Dov Trojanowski', bunkId: 'kevutzah-gimmel' }
     ]
   },
   {
@@ -109,14 +109,14 @@ export const CAMP_DATA: Bunk[] = [
       { id: 'staff_d1', name: 'Dovi Cadaner', bunkId: 'kevutzah-daled' }
     ],
     campers: [
-      { id: 'camper_d1', name: 'Shmuel Bukiet', bunkId: 'kevutzah-daled' },
-      { id: 'camper_d2', name: 'Levi Gluck', bunkId: 'kevutzah-daled' },
-      { id: 'camper_d3', name: 'Bentzi Korf', bunkId: 'kevutzah-daled' },
-      { id: 'camper_d4', name: 'Yochanan Laine', bunkId: 'kevutzah-daled' },
-      { id: 'camper_d5', name: 'Yisroel Meir Mishulovin', bunkId: 'kevutzah-daled' },
-      { id: 'camper_d6', name: 'Motti Rivkin', bunkId: 'kevutzah-daled' },
-      { id: 'camper_d7', name: 'Shmuel Zalman Schreiber', bunkId: 'kevutzah-daled' },
-      { id: 'camper_d8', name: 'Levi Strikovsky', bunkId: 'kevutzah-daled' }
+      { id: 'camper_d1', name: 'Daniel Braun', bunkId: 'kevutzah-daled' },
+      { id: 'camper_d2', name: 'Yoni Cotlar', bunkId: 'kevutzah-daled' },
+      { id: 'camper_d3', name: 'Zalmy Epstein', bunkId: 'kevutzah-daled' },
+      { id: 'camper_d4', name: 'Mendel Horowitz', bunkId: 'kevutzah-daled' },
+      { id: 'camper_d5', name: 'Yisroel Reicher', bunkId: 'kevutzah-daled' },
+      { id: 'camper_d6', name: 'Shmuli Smith', bunkId: 'kevutzah-daled' },
+      { id: 'camper_d7', name: 'Michai Weiss', bunkId: 'kevutzah-daled' },
+      { id: 'camper_d8', name: 'Alan Grimberg', bunkId: 'kevutzah-daled' }
     ]
   },
   {
@@ -127,15 +127,15 @@ export const CAMP_DATA: Bunk[] = [
       { id: 'staff_h1', name: 'A B Stolik', bunkId: 'kevutzah-hei' }
     ],
     campers: [
-      { id: 'camper_h1', name: 'Mattan Eckstein', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h2', name: 'Dovid Gancz', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h3', name: 'Mendy Hendel', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h4', name: 'Mendy Hivert', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h5', name: 'Shmuel Kesselman', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h6', name: 'Yisroel Moshe Kotlarsky', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h7', name: 'Mendy Kurant', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h8', name: 'Dovid Nissan', bunkId: 'kevutzah-hei' },
-      { id: 'camper_h9', name: 'Mendy Schecter', bunkId: 'kevutzah-hei' }
+      { id: 'camper_h1', name: 'Shiloh Menachem Abarbanel', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h2', name: 'Mordechai Barouk', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h3', name: 'Menachem Mendel Hankin', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h4', name: 'Schneur Zalman Kaplan', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h5', name: 'Eliyahu Chaim Kroker', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h6', name: 'Ben Nachlas', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h7', name: 'Yacov Tawil', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h8', name: 'Shmuly Teitelbaum', bunkId: 'kevutzah-hei' },
+      { id: 'camper_h9', name: 'Benyamin Young', bunkId: 'kevutzah-hei' }
     ]
   },
   {
@@ -146,14 +146,14 @@ export const CAMP_DATA: Bunk[] = [
       { id: 'staff_v1', name: 'Uziel Wagner', bunkId: 'kevutzah-vov' }
     ],
     campers: [
-      { id: 'camper_v1', name: 'Levi Greenwald', bunkId: 'kevutzah-vov' },
-      { id: 'camper_v2', name: 'Yisroel Halperin', bunkId: 'kevutzah-vov' },
-      { id: 'camper_v3', name: 'Tzvi Hirsch Kesselman', bunkId: 'kevutzah-vov' },
-      { id: 'camper_v4', name: 'Levi Kraus', bunkId: 'kevutzah-vov' },
-      { id: 'camper_v5', name: 'Yehoshua Landa', bunkId: 'kevutzah-vov' },
-      { id: 'camper_v6', name: 'Mendel Munitz', bunkId: 'kevutzah-vov' },
-      { id: 'camper_v7', name: 'Mendel Yitzchok Slonim', bunkId: 'kevutzah-vov' },
-      { id: 'camper_v8', name: 'Chaim Yitzchok Zaklikovsky', bunkId: 'kevutzah-vov' }
+      { id: 'camper_v1', name: 'Dovber Chakoff', bunkId: 'kevutzah-vov' },
+      { id: 'camper_v2', name: 'Yehuda Jacobowitz', bunkId: 'kevutzah-vov' },
+      { id: 'camper_v3', name: 'Mendel Khaytin', bunkId: 'kevutzah-vov' },
+      { id: 'camper_v4', name: 'Yehuda Levin', bunkId: 'kevutzah-vov' },
+      { id: 'camper_v5', name: 'Shmuly Pliskin', bunkId: 'kevutzah-vov' },
+      { id: 'camper_v6', name: 'Yaakov Posner', bunkId: 'kevutzah-vov' },
+      { id: 'camper_v7', name: 'Binyomin Press', bunkId: 'kevutzah-vov' },
+      { id: 'camper_v8', name: 'Shneur Zalman Rosenfeld', bunkId: 'kevutzah-vov' }
     ]
   }
 ];

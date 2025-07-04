@@ -86,11 +86,28 @@ const CamperHistoryView: React.FC<CamperHistoryViewProps> = ({ camperId }) => {
                       })}
                     </h4>
                     <p className="text-sm text-gray-600">
-                      Submitted: {new Date(submission.submittedAt).toLocaleString()}
+                      Submitted at: {new Date(submission.submittedAt).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })} on {new Date(submission.submittedAt).toLocaleDateString()}
                     </p>
                     {submission.approvedAt && (
                       <p className="text-sm text-green-600">
-                        Approved: {new Date(submission.approvedAt).toLocaleString()}
+                        Approved at: {new Date(submission.approvedAt).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })} on {new Date(submission.approvedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                    {submission.rejectedAt && (
+                      <p className="text-sm text-red-600">
+                        Rejected at: {new Date(submission.rejectedAt).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })} on {new Date(submission.rejectedAt).toLocaleDateString()}
                       </p>
                     )}
                   </div>

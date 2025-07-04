@@ -80,7 +80,7 @@ const CamperManagement = () => {
     const camperProfile: CamperProfile = {
       id: `camper_${Date.now()}`,
       name: newCamper.name,
-      code: newCamper.code || MasterData.generateSecureCamperCode(bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A', Math.floor(Math.random() * 100)),
+      code: newCamper.code || MasterData.generateSecureCamperCode(bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A', Math.floor(Math.random() * 100), newCamper.name),
       bunkId: newCamper.bunkId,
       bunkName: bunk.displayName
     };

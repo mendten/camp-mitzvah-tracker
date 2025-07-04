@@ -57,8 +57,8 @@ class MasterDataStorage {
       bunk.campers.forEach((camper: any, index: number) => {
         // Extract kevutzah letter from bunk displayName
         const bunkLetter = bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
-        // Generate secure 6-8 character code
-        const secureCode = this.generateSecureCamperCode(bunkLetter, index + 1);
+        // Generate secure code in SBAA27 format
+        const secureCode = this.generateSecureCamperCode(bunkLetter, index + 1, camper.name);
         
         profiles.push({
           id: camper.id,
@@ -84,16 +84,20 @@ class MasterDataStorage {
     return profiles.find(p => p.id === camperId) || null;
   }
 
-  // Generate secure camper code (6-8 characters)
-  generateSecureCamperCode(bunkLetter: string, position: number): string {
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${bunkLetter}${position}${randomSuffix}`;
+  // Generate secure camper code (SBAA27 format)
+  generateSecureCamperCode(bunkLetter: string, position: number, camperName: string): string {
+    const names = camperName.split(' ');
+    const firstNameCode = names[0].substring(0, 2).toUpperCase();
+    const lastNameCode = names[names.length - 1].substring(0, 1).toUpperCase();
+    const randomNumbers = Math.floor(10 + Math.random() * 90); // 10-99
+    return `${firstNameCode}${lastNameCode}${bunkLetter}${randomNumbers}`;
   }
 
-  // Generate secure staff code
-  generateSecureStaffCode(bunkLetter: string, position: number): string {
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `STF_${bunkLetter}${position}${randomSuffix}`;
+  // Generate secure staff code (harder format)
+  generateSecureStaffCode(bunkLetter: string, position: number, staffName: string): string {
+    const initials = staffName.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
+    const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `STF_${initials}_${bunkLetter}${position}_${randomSuffix}`;
   }
 
   // Get all submissions

@@ -26,7 +26,13 @@ const BunkManagementDialog: React.FC<BunkManagementDialogProps> = ({
   const [newStaffName, setNewStaffName] = useState('');
   const { toast } = useToast();
 
-  if (!bunk) return null;
+  // Show first bunk if none provided (for testing)
+  const displayBunk = bunk || {
+    id: 'kevutzah-alef',
+    displayName: 'Kevutzah Alef',
+    campers: [],
+    staff: []
+  };
 
   const handleEditCamper = (camper: any) => {
     setEditingCamper({ ...camper });
@@ -84,7 +90,7 @@ const BunkManagementDialog: React.FC<BunkManagementDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Manage Bunk {bunk.displayName}</DialogTitle>
+          <DialogTitle>Manage Bunk {displayBunk.displayName}</DialogTitle>
           <DialogDescription>
             Add, edit, or remove campers and staff from this bunk
           </DialogDescription>
@@ -92,8 +98,8 @@ const BunkManagementDialog: React.FC<BunkManagementDialogProps> = ({
 
         <Tabs defaultValue="campers" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="campers">Campers ({bunk.campers.length})</TabsTrigger>
-            <TabsTrigger value="staff">Staff ({bunk.staff.length})</TabsTrigger>
+            <TabsTrigger value="campers">Campers ({displayBunk.campers.length})</TabsTrigger>
+            <TabsTrigger value="staff">Staff ({displayBunk.staff.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="campers" className="space-y-4">
@@ -124,7 +130,7 @@ const BunkManagementDialog: React.FC<BunkManagementDialogProps> = ({
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3">
-                  {bunk.campers.map((camper: any) => (
+                  {displayBunk.campers.map((camper: any) => (
                     <div key={camper.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="space-y-1">
                         <p className="font-medium">{camper.name}</p>
@@ -181,7 +187,7 @@ const BunkManagementDialog: React.FC<BunkManagementDialogProps> = ({
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3">
-                  {bunk.staff.map((staff: any) => (
+                  {displayBunk.staff.map((staff: any) => (
                     <div key={staff.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="space-y-1">
                         <p className="font-medium">{staff.name}</p>

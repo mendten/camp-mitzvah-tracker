@@ -22,7 +22,9 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
     bunk.staff.map((staff, index) => {
       // Extract kevutzah letter from bunk displayName  
       const bunkLetter = bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
-      const secureCode = `STF_${bunkLetter}${index + 1}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      // Generate fixed staff code - no Math.random() to avoid changing codes
+      const initials = staff.name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
+      const secureCode = `STF_${initials}_${bunkLetter}${index + 1}_9X7M`;
       
       return {
         ...staff,
