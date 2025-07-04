@@ -36,14 +36,12 @@ export interface SessionConfig {
 }
 
 export const DEFAULT_MISSIONS: Mission[] = [
-  { id: 'shacharit', title: 'Shacharit (Morning Prayer)', type: 'prayer', icon: '🌅', isMandatory: true, isActive: true },
-  { id: 'torah-study', title: 'Torah Study', type: 'learning', icon: '📜', isMandatory: true, isActive: true },
-  { id: 'chesed', title: 'Acts of Kindness', type: 'mitzvah', icon: '❤️', isMandatory: false, isActive: true },
-  { id: 'sports', title: 'Sports & Activities', type: 'activity', icon: '⚽', isMandatory: false, isActive: true },
-  { id: 'mincha', title: 'Mincha (Afternoon Prayer)', type: 'prayer', icon: '☀️', isMandatory: false, isActive: true },
-  { id: 'evening-seder', title: 'Evening Learning Seder', type: 'learning', icon: '📚', isMandatory: false, isActive: true },
-  { id: 'maariv', title: 'Maariv (Evening Prayer)', type: 'prayer', icon: '🌙', isMandatory: false, isActive: true },
-  { id: 'reflection', title: 'Daily Reflection', type: 'reflection', icon: '⭐', isMandatory: false, isActive: true },
+  { id: 'modeh-ani', title: 'Modeh Ani', type: 'prayer', icon: '🌅', isMandatory: true, isActive: true },
+  { id: 'negel-vaaser', title: 'Negel Vaaser', type: 'ritual', icon: '💧', isMandatory: true, isActive: true },
+  { id: 'brachos-krias-shema', title: 'Brachos/Krias Shema in morning', type: 'prayer', icon: '📜', isMandatory: true, isActive: true },
+  { id: 'krias-shema-night', title: 'Krias Shema/Chesbon Hanefesh at night', type: 'prayer', icon: '🌙', isMandatory: true, isActive: true },
+  { id: 'sleep-yarmulka-tzitzis', title: 'Sleep with yarmulka and tzitzis', type: 'mitzvah', icon: '🛏️', isMandatory: true, isActive: true },
+  { id: 'mikvah', title: 'Mikvah', type: 'ritual', icon: '🏊', isMandatory: false, isActive: true },
 ];
 
 export const CAMP_DATA: Bunk[] = [
@@ -52,25 +50,17 @@ export const CAMP_DATA: Bunk[] = [
     name: 'alef',
     displayName: 'Alef',
     staff: [
-      { id: 'staff_menny', name: 'Menny Munitz', bunkId: 'alef' },
-      { id: 'staff_zalman_r', name: 'Zalman Rubenfeld', bunkId: 'alef' }
+      { id: 'staff_mendy_z', name: 'Mendy Zalmanov', bunkId: 'alef' }
     ],
     campers: [
-      { id: 'shiloh_abarbanel', name: 'Shiloh Menachem Abarbanel', bunkId: 'alef' },
-      { id: 'mordechai_barouk', name: 'Mordechai Barouk', bunkId: 'alef' },
+      { id: 'isaac_abergel', name: 'Isaac Abergel', bunkId: 'alef' },
+      { id: 'tzvi_abergel', name: 'Tzvi Abergel', bunkId: 'alef' },
+      { id: 'mordy_bloom', name: 'Mordy Bloom', bunkId: 'alef' },
+      { id: 'mendel_bortunk', name: 'Mendel Bortunk', bunkId: 'alef' },
       { id: 'avremi_brody', name: 'Avremi Brody', bunkId: 'alef' },
-      { id: 'yoni_cotlar', name: 'Yoni Cotlar', bunkId: 'alef' },
-      { id: 'zalmy_epstein', name: 'Zalmy Epstein', bunkId: 'alef' },
-      { id: 'maor_fellig', name: 'Maor Fellig', bunkId: 'alef' },
-      { id: 'yaakov_friedman', name: 'Yaakov Friedman', bunkId: 'alef' },
-      { id: 'menachem_hankin', name: 'Menachem Mendel Hankin', bunkId: 'alef' },
-      { id: 'schneur_kaplan', name: 'Schneur Zalman Kaplan', bunkId: 'alef' },
-      { id: 'yisroel_levy', name: 'Yisroel Levy', bunkId: 'alef' },
-      { id: 'shaya_menkes', name: 'Shaya Menkes', bunkId: 'alef' },
-      { id: 'menachem_miara', name: 'Menachem Mendel Miara', bunkId: 'alef' },
-      { id: 'yossi_perlstein', name: 'Yossi Perlstein', bunkId: 'alef' },
       { id: 'mordy_raksin', name: 'Mordy Raksin', bunkId: 'alef' },
-      { id: 'yacov_tawil', name: 'Yacov Tawil', bunkId: 'alef' }
+      { id: 'yossi_weiss', name: 'Yossi Weiss', bunkId: 'alef' },
+      { id: 'shimon_myhill', name: 'Shimon Myhill', bunkId: 'alef' }
     ]
   },
   {
@@ -78,20 +68,18 @@ export const CAMP_DATA: Bunk[] = [
     name: 'beis',
     displayName: 'Beis',
     staff: [
-      { id: 'staff_mendy_z', name: 'Mendy Zalmanov', bunkId: 'beis' },
-      { id: 'staff_dovi_r', name: 'Dovi Rosenfeld', bunkId: 'beis' }
+      { id: 'staff_moshe_y', name: 'Moshe Young', bunkId: 'beis' }
     ],
     campers: [
-      { id: 'isaac_abergel', name: 'Isaac Abergel', bunkId: 'beis' },
-      { id: 'tzvi_abergel', name: 'Tzvi Abergel', bunkId: 'beis' },
-      { id: 'moshe_abramov', name: 'Moshe Abramov', bunkId: 'beis' },
-      { id: 'yona_krinsky', name: 'Yona Krinsky', bunkId: 'beis' },
-      { id: 'yosef_miara', name: 'Yosef Yitzchak Miara', bunkId: 'beis' },
-      { id: 'shimon_myhill', name: 'Shimon Myhill', bunkId: 'beis' },
-      { id: 'ben_nachlas', name: 'Ben Nachlas', bunkId: 'beis' },
+      { id: 'maor_fellig', name: 'Maor Fellig', bunkId: 'beis' },
+      { id: 'jj_fischweicher', name: 'JJ Fischweicher', bunkId: 'beis' },
+      { id: 'zalman_fischweicher', name: 'Zalman Fischweicher', bunkId: 'beis' },
+      { id: 'eli_levy', name: 'Eli Levy', bunkId: 'beis' },
+      { id: 'tzvi_margolin', name: 'Tzvi Margolin', bunkId: 'beis' },
       { id: 'shmuly_shagalov', name: 'Shmuly Shagalov', bunkId: 'beis' },
       { id: 'chaim_silberstein', name: 'Chaim Silberstein', bunkId: 'beis' },
-      { id: 'zalman_winner', name: 'Zalman Winner', bunkId: 'beis' }
+      { id: 'mendel_weic', name: 'Mendel Weic', bunkId: 'beis' },
+      { id: 'ari_wolff', name: 'Ari Wolff', bunkId: 'beis' }
     ]
   },
   {
@@ -99,26 +87,18 @@ export const CAMP_DATA: Bunk[] = [
     name: 'gimmel',
     displayName: 'Gimmel',
     staff: [
-      { id: 'staff_koppel', name: 'Koppel Silberberg', bunkId: 'gimmel' },
-      { id: 'staff_arik', name: 'Arik Gutnik', bunkId: 'gimmel' }
+      { id: 'staff_nosson_o', name: 'Nosson Oster', bunkId: 'gimmel' }
     ],
     campers: [
       { id: 'nachman_altein', name: 'Nachman Yosef Altein', bunkId: 'gimmel' },
-      { id: 'motti_andrusier', name: 'Motti Andrusier', bunkId: 'gimmel' },
       { id: 'dovid_bedrick', name: 'Dovid Bedrick', bunkId: 'gimmel' },
-      { id: 'mendel_bortunk', name: 'Mendel Bortunk', bunkId: 'gimmel' },
-      { id: 'shmuel_elkayam', name: 'Shmuel Elkayam', bunkId: 'gimmel' },
+      { id: 'yaakov_friedman', name: 'Yaakov Friedman', bunkId: 'gimmel' },
       { id: 'yanky_friedman', name: 'Yanky Friedman', bunkId: 'gimmel' },
-      { id: 'shmuel_gansburg', name: 'Shmuel Gansburg', bunkId: 'gimmel' },
-      { id: 'schneur_geisinsky', name: 'Schneur Geisinsky', bunkId: 'gimmel' },
-      { id: 'chaim_gutnick', name: 'Chaim Gutnick', bunkId: 'gimmel' },
       { id: 'yehuda_halilyan', name: 'Yehuda Halilyan', bunkId: 'gimmel' },
-      { id: 'mordechai_kudan', name: 'Mordechai Kudan', bunkId: 'gimmel' },
-      { id: 'schneur_levin', name: 'Schneur Levin', bunkId: 'gimmel' },
-      { id: 'benny_mendelsohn', name: 'Benny Mendelsohn', bunkId: 'gimmel' },
-      { id: 'yaakov_rieger', name: 'Yaakov Rieger', bunkId: 'gimmel' },
-      { id: 'menachem_wolff', name: 'Menachem Mendel Wolff', bunkId: 'gimmel' },
-      { id: 'benyamin_young', name: 'Benyamin Young', bunkId: 'gimmel' }
+      { id: 'nachum_marcus', name: 'Nachum Marcus', bunkId: 'gimmel' },
+      { id: 'shaya_naiditch', name: 'Shaya Naiditch', bunkId: 'gimmel' },
+      { id: 'tzvika_weinbaum', name: 'Tzvika Weinbaum', bunkId: 'gimmel' },
+      { id: 'yosef_trojanowski', name: 'Yosef Dov Trojanowski', bunkId: 'gimmel' }
     ]
   },
   {
@@ -126,20 +106,54 @@ export const CAMP_DATA: Bunk[] = [
     name: 'daled',
     displayName: 'Daled',
     staff: [
-      { id: 'staff_moishy', name: 'Moishy Young', bunkId: 'daled' },
-      { id: 'staff_chesky', name: 'Chesky Wilchansky', bunkId: 'daled' }
+      { id: 'staff_dovi_c', name: 'Dovi Cadaner', bunkId: 'daled' }
     ],
     campers: [
-      { id: 'avraham_galinsky', name: 'Avraham Galinsky', bunkId: 'daled' },
+      { id: 'daniel_braun', name: 'Daniel Braun', bunkId: 'daled' },
+      { id: 'yoni_cotlar', name: 'Yoni Cotlar', bunkId: 'daled' },
+      { id: 'zalmy_epstein', name: 'Zalmy Epstein', bunkId: 'daled' },
       { id: 'mendel_horowitz', name: 'Mendel Horowitz', bunkId: 'daled' },
-      { id: 'yehuda_levin', name: 'Yehuda Levin', bunkId: 'daled' },
-      { id: 'alter_marcus', name: 'Alter Marcus', bunkId: 'daled' },
-      { id: 'tzvi_margolin', name: 'Tzvi Margolin', bunkId: 'daled' },
-      { id: 'yaakov_posner', name: 'Yaakov Posner', bunkId: 'daled' },
-      { id: 'mendel_raskin', name: 'Mendel Raskin', bunkId: 'daled' },
-      { id: 'shneur_rosenfeld', name: 'Shneur Zalman Rosenfeld', bunkId: 'daled' },
-      { id: 'yosef_trojanowski', name: 'Yosef Dov Trojanowski', bunkId: 'daled' },
-      { id: 'michai_weiss', name: 'Michai Weiss', bunkId: 'daled' }
+      { id: 'yisroel_reicher', name: 'Yisroel Reicher', bunkId: 'daled' },
+      { id: 'shmuli_smith', name: 'Shmuli Smith', bunkId: 'daled' },
+      { id: 'michai_weiss', name: 'Michai Weiss', bunkId: 'daled' },
+      { id: 'alan_grimberg', name: 'Alan Grimberg', bunkId: 'daled' }
+    ]
+  },
+  {
+    id: 'hei',
+    name: 'hei',
+    displayName: 'Hei',
+    staff: [
+      { id: 'staff_ab_s', name: 'A B Stolik', bunkId: 'hei' }
+    ],
+    campers: [
+      { id: 'shiloh_abarbanel', name: 'Shiloh Menachem Abarbanel', bunkId: 'hei' },
+      { id: 'mordechai_barouk', name: 'Mordechai Barouk', bunkId: 'hei' },
+      { id: 'menachem_hankin', name: 'Menachem Mendel Hankin', bunkId: 'hei' },
+      { id: 'schneur_kaplan', name: 'Schneur Zalman Kaplan', bunkId: 'hei' },
+      { id: 'eliyahu_kroker', name: 'Eliyahu Chaim Kroker', bunkId: 'hei' },
+      { id: 'ben_nachlas', name: 'Ben Nachlas', bunkId: 'hei' },
+      { id: 'yacov_tawil', name: 'Yacov Tawil', bunkId: 'hei' },
+      { id: 'shmuly_teitelbaum', name: 'Shmuly Teitelbaum', bunkId: 'hei' },
+      { id: 'benyamin_young', name: 'Benyamin Young', bunkId: 'hei' }
+    ]
+  },
+  {
+    id: 'vov',
+    name: 'vov',
+    displayName: 'Vov',
+    staff: [
+      { id: 'staff_uziel_w', name: 'Uziel Wagner', bunkId: 'vov' }
+    ],
+    campers: [
+      { id: 'dovber_chakoff', name: 'Dovber Chakoff', bunkId: 'vov' },
+      { id: 'yehuda_jacobowitz', name: 'Yehuda Jacobowitz', bunkId: 'vov' },
+      { id: 'mendel_khaytin', name: 'Mendel Khaytin', bunkId: 'vov' },
+      { id: 'yehuda_levin', name: 'Yehuda Levin', bunkId: 'vov' },
+      { id: 'shmuly_pliskin', name: 'Shmuly Pliskin', bunkId: 'vov' },
+      { id: 'yaakov_posner', name: 'Yaakov Posner', bunkId: 'vov' },
+      { id: 'binyomin_press', name: 'Binyomin Press', bunkId: 'vov' },
+      { id: 'shneur_rosenfeld', name: 'Shneur Zalman Rosenfeld', bunkId: 'vov' }
     ]
   }
 ];

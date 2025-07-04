@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Users, Calendar, Settings, BarChart3, Home, Shield, Target, UserPlus } from 'lucide-react';
 import AdminLogin from '@/components/AdminLogin';
 import AdminSubmissionsManagement from '@/components/AdminSubmissionsManagement';
+import HistoricalDataView from '@/components/HistoricalDataView';
 import AdminReportDashboard from '@/components/AdminReportDashboard';
 import AdminAnalytics from '@/components/AdminAnalytics';
 import StaffManagement from '@/components/StaffManagement';
@@ -166,12 +167,12 @@ const AdminDashboard = () => {
             <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="historical">Historical</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="campers">Edit Campers</TabsTrigger>
             <TabsTrigger value="missions">Edit Missions</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="management">Staff & Bunks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="public">
@@ -184,6 +185,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="submissions">
             <AdminSubmissionsManagement />
+          </TabsContent>
+
+          <TabsContent value="historical">
+            <HistoricalDataView />
           </TabsContent>
 
           <TabsContent value="sessions">
@@ -203,23 +208,23 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="settings">
-            <AdminSettings />
-          </TabsContent>
-
-          <TabsContent value="management">
-            <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>Staff & Bunk Management</span>
-                  <Button onClick={() => setShowBunkManagement(true)} size="sm">
-                    Manage Bunks
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StaffManagement />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <AdminSettings />
+              
+              <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-center">
+                    <span>Staff & Bunk Management</span>
+                    <Button onClick={() => setShowBunkManagement(true)} size="sm">
+                      Manage Bunks
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StaffManagement />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>

@@ -42,8 +42,8 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
       return;
     }
 
-    // Validate access code
-    if (accessCode.toLowerCase() !== staff.accessCode) {
+    // Validate access code (exact match required)
+    if (accessCode !== staff.accessCode) {
       setError('Invalid access code. Please contact administration for your correct code.');
       return;
     }

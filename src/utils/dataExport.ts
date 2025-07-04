@@ -1,5 +1,5 @@
-
 import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
+import { MasterData } from '@/utils/masterDataStorage';
 
 export interface CamperExportData {
   id: string;
@@ -48,30 +48,40 @@ export interface FullExportData {
     dailyRequired: number;
     weeklyRequired: number;
   };
+  masterData: {
+    profiles: any[];
+    submissions: any[];
+  };
 }
 
 export function getCamperStats(camperId: string) {
-  const progress = localStorage.getItem(`camper_${camperId}_missions`);
-  const submitted = localStorage.getItem(`camper_${camperId}_submitted`);
-  const approved = localStorage.getItem(`camper_${camperId}_approved`);
-  
-  const completedMissions = progress ? JSON.parse(progress) : [];
-  const submittedMissions = submitted ? JSON.parse(submitted) : [];
-  const approvedMissions = approved ? JSON.parse(approved) : [];
+  const submission = MasterData.getCamperTodaySubmission(camperId);
+  const workingMissions = MasterData.getCamperWorkingMissions(camperId);
   
   const activeMissions = DEFAULT_MISSIONS.filter(m => m.isActive);
   const mandatoryMissions = activeMissions.filter(m => m.isMandatory);
   
-  const dailyRequired = parseInt(localStorage.getItem('mission_daily_required') || '3');
-  const weeklyRequired = parseInt(localStorage.getItem('mission_weekly_required') || '15');
+  const dailyRequired = MasterData.getDailyRequired();
+  
+  let completedMissions = [];
+  let approvedMissions = [];
+  let submittedMissions = [];
+  
+  if (submission) {
+    submittedMissions = submission.missions;
+    if (submission.status === 'approved') {
+      approvedMissions = submission.missions;
+      completedMissions = submission.missions;
+    }
+  } else {
+    completedMissions = workingMissions;
+  }
   
   const completedMandatory = mandatoryMissions.filter(m => 
     approvedMissions.includes(m.id)
   ).length;
   
   const todayQualified = approvedMissions.length >= dailyRequired;
-  const weekTotal = approvedMissions.length;
-  const sessionTotal = approvedMissions.length;
   
   return {
     completedMissions: completedMissions.length,
@@ -81,46 +91,48 @@ export function getCamperStats(camperId: string) {
     mandatoryCompleted: completedMandatory,
     mandatoryTotal: mandatoryMissions.length,
     todayQualified,
-    weekTotal,
-    sessionTotal,
-    weeklyRequired,
+    weekTotal: approvedMissions.length,
+    sessionTotal: approvedMissions.length,
+    weeklyRequired: dailyRequired * 7,
     dailyRequired,
     progressPercentage: Math.round((approvedMissions.length / activeMissions.length) * 100)
   };
 }
 
 export function exportAllData(): FullExportData {
-  const allCampers = CAMP_DATA.flatMap(bunk => 
-    bunk.campers.map(camper => {
-      const stats = getCamperStats(camper.id);
-      return {
-        id: camper.id,
-        name: camper.name,
-        bunk: bunk.displayName,
-        completedMissions: JSON.parse(localStorage.getItem(`camper_${camper.id}_missions`) || '[]'),
-        submittedMissions: JSON.parse(localStorage.getItem(`camper_${camper.id}_submitted`) || '[]'),
-        approvedMissions: JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]'),
-        dailyQualified: stats.todayQualified,
-        weekTotal: stats.weekTotal,
-        sessionTotal: stats.sessionTotal,
-        mandatoryCompleted: stats.mandatoryCompleted,
-        mandatoryTotal: stats.mandatoryTotal,
-        progressPercentage: stats.progressPercentage
-      };
-    })
-  );
+  const allCamperProfiles = MasterData.getAllCamperProfiles();
+  const allSubmissions = MasterData.getAllSubmissions();
+  
+  const allCampers = allCamperProfiles.map(profile => {
+    const stats = getCamperStats(profile.id);
+    const submission = MasterData.getCamperTodaySubmission(profile.id);
+    const workingMissions = MasterData.getCamperWorkingMissions(profile.id);
+    
+    return {
+      id: profile.id,
+      name: profile.name,
+      bunk: profile.bunkName,
+      completedMissions: workingMissions,
+      submittedMissions: submission ? submission.missions : [],
+      approvedMissions: submission && submission.status === 'approved' ? submission.missions : [],
+      dailyQualified: stats.todayQualified,
+      weekTotal: stats.weekTotal,
+      sessionTotal: stats.sessionTotal,
+      mandatoryCompleted: stats.mandatoryCompleted,
+      mandatoryTotal: stats.mandatoryTotal,
+      progressPercentage: stats.progressPercentage
+    };
+  });
 
   const missionStats = DEFAULT_MISSIONS.map(mission => {
-    const totalCampers = CAMP_DATA.reduce((sum, bunk) => sum + bunk.campers.length, 0);
+    const totalCampers = allCamperProfiles.length;
     let completionCount = 0;
     
-    CAMP_DATA.forEach(bunk => {
-      bunk.campers.forEach(camper => {
-        const approved = JSON.parse(localStorage.getItem(`camper_${camper.id}_approved`) || '[]');
-        if (approved.includes(mission.id)) {
-          completionCount++;
-        }
-      });
+    allCamperProfiles.forEach(profile => {
+      const submission = MasterData.getCamperTodaySubmission(profile.id);
+      if (submission && submission.status === 'approved' && submission.missions.includes(mission.id)) {
+        completionCount++;
+      }
     });
 
     return {
@@ -136,16 +148,17 @@ export function exportAllData(): FullExportData {
   });
 
   const bunkStats = CAMP_DATA.map(bunk => {
-    const camperStats = bunk.campers.map(camper => getCamperStats(camper.id));
+    const bunkCampers = allCamperProfiles.filter(profile => profile.bunkId === bunk.id);
+    const camperStats = bunkCampers.map(profile => getCamperStats(profile.id));
     const qualifiedCount = camperStats.filter(stats => stats.todayQualified).length;
-    const avgProgress = Math.round(
+    const avgProgress = camperStats.length > 0 ? Math.round(
       camperStats.reduce((sum, stats) => sum + stats.progressPercentage, 0) / camperStats.length
-    );
+    ) : 0;
 
     return {
       id: bunk.id,
       name: bunk.displayName,
-      totalCampers: bunk.campers.length,
+      totalCampers: bunkCampers.length,
       qualifiedToday: qualifiedCount,
       averageProgress: avgProgress,
       staff: bunk.staff.map(s => s.name)
@@ -161,8 +174,12 @@ export function exportAllData(): FullExportData {
     missions: missionStats,
     bunks: bunkStats,
     settings: {
-      dailyRequired: parseInt(localStorage.getItem('mission_daily_required') || '3'),
-      weeklyRequired: parseInt(localStorage.getItem('mission_weekly_required') || '15')
+      dailyRequired: MasterData.getDailyRequired(),
+      weeklyRequired: MasterData.getDailyRequired() * 7
+    },
+    masterData: {
+      profiles: allCamperProfiles,
+      submissions: allSubmissions
     }
   };
 }
@@ -204,7 +221,7 @@ export function downloadFullReport() {
   // Export bunk performance
   downloadCSV(fullData.bunks, `bunks-performance-session-${fullData.session}`);
   
-  // Export summary JSON
+  // Export summary JSON with MasterData
   const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -227,16 +244,37 @@ export function importData(jsonData: string): boolean {
     
     if (!confirm) return false;
     
-    // Import camper data
-    data.campers.forEach(camper => {
-      localStorage.setItem(`camper_${camper.id}_missions`, JSON.stringify(camper.completedMissions));
-      localStorage.setItem(`camper_${camper.id}_submitted`, JSON.stringify(camper.submittedMissions));
-      localStorage.setItem(`camper_${camper.id}_approved`, JSON.stringify(camper.approvedMissions));
-    });
+    // Import MasterData if available (new format)
+    if (data.masterData) {
+      MasterData.saveAllCamperProfiles(data.masterData.profiles);
+      MasterData.saveAllSubmissions(data.masterData.submissions);
+    } else {
+      // Legacy import - convert old format to new MasterData format
+      console.warn('Importing legacy format - some data may be lost');
+      data.campers.forEach(camper => {
+        // This is a simplified conversion - you may want to enhance this
+        const profile = {
+          id: camper.id,
+          name: camper.name,
+          code: camper.id.toUpperCase(),
+          bunkId: camper.bunk.toLowerCase(),
+          bunkName: camper.bunk
+        };
+        
+        // We can't perfectly recreate the old localStorage format,
+        // so we'll create basic submissions
+        if (camper.approvedMissions.length > 0) {
+          MasterData.submitCamperMissions(camper.id, camper.approvedMissions);
+          const todaySubmission = MasterData.getCamperTodaySubmission(camper.id);
+          if (todaySubmission) {
+            MasterData.approveSubmission(todaySubmission.id, 'Import');
+          }
+        }
+      });
+    }
     
     // Import settings
-    localStorage.setItem('mission_daily_required', data.settings.dailyRequired.toString());
-    localStorage.setItem('mission_weekly_required', data.settings.weeklyRequired.toString());
+    MasterData.setDailyRequired(data.settings.dailyRequired);
     localStorage.setItem('current_session', data.session.toString());
     localStorage.setItem('current_week', data.week.toString());
     localStorage.setItem('current_day', data.day.toString());

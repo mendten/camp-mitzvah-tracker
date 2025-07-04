@@ -14,7 +14,7 @@ const AdminSubmissionsManagement = () => {
   const [submissions, setSubmissions] = useState<CamperSubmission[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<CamperSubmission[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('edit_requested'); // Default to show only edit requests
+  const [statusFilter, setStatusFilter] = useState('all'); // Default to show all submissions
   const [dateFilter, setDateFilter] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -149,7 +149,7 @@ const AdminSubmissionsManagement = () => {
     <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Edit Requests Management</span>
+          <span>All Submissions Management</span>
           <div className="flex items-center space-x-2">
             <Button onClick={exportSubmissions} size="sm" variant="outline">
               <Download className="h-4 w-4 mr-2" />
@@ -175,8 +175,8 @@ const AdminSubmissionsManagement = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Submissions</SelectItem>
               <SelectItem value="edit_requested">Edit Requests Only</SelectItem>
-              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
