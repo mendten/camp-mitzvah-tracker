@@ -12,7 +12,8 @@ export const resetAllData = () => {
       key.startsWith('working_missions_') ||
       key.startsWith('staff_') ||
       key.startsWith('admin_') ||
-      key.startsWith('daily_')
+      key.startsWith('daily_') ||
+      key === 'custom_missions'
     )) {
       keysToRemove.push(key);
     }
@@ -27,7 +28,7 @@ export const resetAllData = () => {
 
 // Check if we need to reset data (version change indicator)
 export const checkDataVersion = () => {
-  const currentVersion = '4.0.0'; // Increment this when data structure changes
+  const currentVersion = '4.1.0'; // Increment this when data structure changes
   const storedVersion = localStorage.getItem('data_version');
   
   if (storedVersion !== currentVersion) {

@@ -37,7 +37,7 @@ export interface SessionConfig {
 
 export const DEFAULT_MISSIONS: Mission[] = [
   { id: 'modeh-ani', title: 'Modeh ani', type: 'prayer', icon: '🌅', isMandatory: true, isActive: true },
-  { id: 'vaaser', title: 'Vaaser', type: 'ritual', icon: '💧', isMandatory: true, isActive: true },
+  { id: 'vaaser', title: 'Negal Vaaser', type: 'ritual', icon: '💧', isMandatory: true, isActive: true },
   { id: 'brachos-krias-shema', title: 'Brachos/Krias Shema in morning', type: 'prayer', icon: '📜', isMandatory: true, isActive: true },
   { id: 'krias-shema-night', title: 'Krias Shema/Chesbon Hanefesh at night', type: 'prayer', icon: '🌙', isMandatory: true, isActive: true },
   { id: 'sleep-yarmulka-tzitzis', title: 'Sleep with yarmulka and tzitzis', type: 'mitzvah', icon: '🛏️', isMandatory: true, isActive: true },

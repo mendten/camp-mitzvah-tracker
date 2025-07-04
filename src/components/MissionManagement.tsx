@@ -38,26 +38,18 @@ const MissionManagement = () => {
   }, []);
 
   const loadMissions = () => {
-    // Load missions from localStorage or use defaults
-    const storedMissions = localStorage.getItem('custom_missions');
-    if (storedMissions) {
-      setMissions(JSON.parse(storedMissions));
-    } else {
-      // Convert DEFAULT_MISSIONS to ExtendedMission format
-      const extendedMissions: ExtendedMission[] = DEFAULT_MISSIONS.map(mission => ({
-        ...mission,
-        description: mission.title, // Use title as description for existing missions
-        category: mission.type,
-        points: 1
-      }));
-      setMissions(extendedMissions);
-      localStorage.setItem('custom_missions', JSON.stringify(extendedMissions));
-    }
+    // Convert DEFAULT_MISSIONS to ExtendedMission format
+    const extendedMissions: ExtendedMission[] = DEFAULT_MISSIONS.map(mission => ({
+      ...mission,
+      description: mission.title, // Use title as description for existing missions
+      category: mission.type,
+      points: 1
+    }));
+    setMissions(extendedMissions);
   };
 
   const saveMissions = (updatedMissions: ExtendedMission[]) => {
     setMissions(updatedMissions);
-    localStorage.setItem('custom_missions', JSON.stringify(updatedMissions));
   };
 
   const handleAddMission = () => {
