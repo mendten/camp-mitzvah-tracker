@@ -58,7 +58,7 @@ const CamperLogin = () => {
       localStorage.setItem('selectedBunk', selectedBunkId);
       navigate('/camper');
     } else {
-      alert('Incorrect access code. Please contact your counselor for your correct code.');
+      alert(`Incorrect access code. Expected: ${camperProfile.code}`);
     }
   };
 

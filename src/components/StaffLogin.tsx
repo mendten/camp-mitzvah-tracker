@@ -17,15 +17,20 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
   const [accessCode, setAccessCode] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  // Get all staff members across all bunks
+  // Get all staff members across all bunks with simple codes
   const allStaff = CAMP_DATA.flatMap(bunk => 
-    bunk.staff.map(staff => ({
-      ...staff,
-      bunkName: bunk.displayName,
-      bunkId: bunk.id,
-      // Generate proper access codes (in real system, these would be preset)
-      accessCode: `${staff.name.split(' ')[0].toLowerCase()}${new Date().getFullYear().toString().slice(-2)}`
-    }))
+    bunk.staff.map((staff, index) => {
+      // Extract kevutzah letter from bunk displayName  
+      const bunkLetter = bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
+      const simpleCode = `S${bunkLetter}${index + 1}`;
+      
+      return {
+        ...staff,
+        bunkName: bunk.displayName,
+        bunkId: bunk.id,
+        accessCode: simpleCode
+      };
+    })
   );
 
   const handleLogin = () => {
@@ -44,7 +49,7 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
 
     // Validate access code (exact match required)
     if (accessCode !== staff.accessCode) {
-      setError('Invalid access code. Please contact administration for your correct code.');
+      setError(`Invalid access code. Expected: ${staff.accessCode}`);
       return;
     }
 

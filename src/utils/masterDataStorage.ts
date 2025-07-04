@@ -54,11 +54,15 @@ class MasterDataStorage {
     const profiles: CamperProfile[] = [];
     
     CAMP_DATA.forEach((bunk: any) => {
-      bunk.campers.forEach((camper: any) => {
+      bunk.campers.forEach((camper: any, index: number) => {
+        // Extract kevutzah letter from bunk displayName
+        const bunkLetter = bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
+        const simpleCode = `${bunkLetter}${index + 1}`;
+        
         profiles.push({
           id: camper.id,
           name: camper.name,
-          code: this.generateCamperCode(camper.name, bunk.displayName),
+          code: simpleCode,
           bunkId: bunk.id,
           bunkName: bunk.displayName
         });
@@ -79,12 +83,17 @@ class MasterDataStorage {
     return profiles.find(p => p.id === camperId) || null;
   }
 
-  // Generate camper code from name and bunk
+  // Generate simple camper code based on kevutzah and position
   generateCamperCode(name: string, bunk: string): string {
-    const initials = name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
-    const bunkCode = bunk.charAt(0).toUpperCase();
-    const random = Math.floor(Math.random() * 900) + 100;
-    return `${initials}${bunkCode}${random}`;
+    // Extract kevutzah letter (last word of bunk name)
+    const bunkLetter = bunk.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
+    
+    // Get all existing codes for this bunk to determine next number
+    const profiles = this.getAllCamperProfiles();
+    const bunkProfiles = profiles.filter(p => p.bunkName === bunk);
+    const nextNum = bunkProfiles.length + 1;
+    
+    return `${bunkLetter}${nextNum}`;
   }
 
   // Get all submissions

@@ -34,11 +34,11 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
       return;
     }
 
-    // Accept the camper's actual code or any 4-digit code for testing
-    if (accessCode === camperProfile.code || accessCode.length === 4) {
+    // Validate exact code match only
+    if (accessCode === camperProfile.code) {
       onSelectCamper(selectedCamper);
     } else {
-      alert('Incorrect access code. Please try again or use any 4-digit code for testing.');
+      alert(`Incorrect access code. Expected: ${camperProfile.code}`);
     }
   };
 
@@ -81,7 +81,6 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
                       </div>
                       <div>
                         <span className="font-medium text-gray-900">{camper.name}</span>
-                        <div className="text-xs text-gray-500">Code: {camper.code}</div>
                       </div>
                     </div>
                   </button>
@@ -102,13 +101,13 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
                     maxLength={6}
                   />
                   <p className="text-xs text-gray-500">
-                    Enter your personal code shown above, or any 4-digit code for testing
+                    Enter your personal access code
                   </p>
                 </div>
                 <Button 
                   onClick={handleLogin}
                   className="w-full bg-blue-600 hover:bg-blue-700 transition-colors"
-                  disabled={!selectedCamper || accessCode.length < 4}
+                  disabled={!selectedCamper || !accessCode}
                 >
                   Enter Mission Dashboard
                 </Button>
