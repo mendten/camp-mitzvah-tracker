@@ -27,7 +27,7 @@ export const resetAllData = () => {
 
 // Check if we need to reset data (version change indicator)
 export const checkDataVersion = () => {
-  const currentVersion = '2.0.0'; // Increment this when data structure changes
+  const currentVersion = '3.0.0'; // Increment this when data structure changes
   const storedVersion = localStorage.getItem('data_version');
   
   if (storedVersion !== currentVersion) {

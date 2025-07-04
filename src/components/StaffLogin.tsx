@@ -17,18 +17,18 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
   const [accessCode, setAccessCode] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  // Get all staff members across all bunks with simple codes
+  // Get all staff members across all bunks with secure codes
   const allStaff = CAMP_DATA.flatMap(bunk => 
     bunk.staff.map((staff, index) => {
       // Extract kevutzah letter from bunk displayName  
       const bunkLetter = bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
-      const simpleCode = `S${bunkLetter}${index + 1}`;
+      const secureCode = `STF_${bunkLetter}${index + 1}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       
       return {
         ...staff,
         bunkName: bunk.displayName,
         bunkId: bunk.id,
-        accessCode: simpleCode
+        accessCode: secureCode
       };
     })
   );
@@ -49,7 +49,7 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
 
     // Validate access code (exact match required)
     if (accessCode !== staff.accessCode) {
-      setError(`Invalid access code. Expected: ${staff.accessCode}`);
+      setError('Invalid access code. Please contact administration.');
       return;
     }
 
@@ -116,7 +116,7 @@ const StaffLogin: React.FC<StaffLoginProps> = ({ onLogin, onBack }) => {
                     placeholder="Enter your access code"
                   />
                   <p className="text-xs text-gray-500">
-                    Contact administration if you don't have your access code
+                    Contact administration for your access code
                   </p>
                 </div>
                 <Button 

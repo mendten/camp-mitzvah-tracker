@@ -50,19 +50,20 @@ class MasterDataStorage {
       return JSON.parse(stored);
     }
     
-    // Initialize from CAMP_DATA if not exists
+    // Initialize from CAMP_DATA with secure codes
     const profiles: CamperProfile[] = [];
     
     CAMP_DATA.forEach((bunk: any) => {
       bunk.campers.forEach((camper: any, index: number) => {
         // Extract kevutzah letter from bunk displayName
         const bunkLetter = bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
-        const simpleCode = `${bunkLetter}${index + 1}`;
+        // Generate secure 6-8 character code
+        const secureCode = this.generateSecureCamperCode(bunkLetter, index + 1);
         
         profiles.push({
           id: camper.id,
           name: camper.name,
-          code: simpleCode,
+          code: secureCode,
           bunkId: bunk.id,
           bunkName: bunk.displayName
         });
@@ -83,17 +84,16 @@ class MasterDataStorage {
     return profiles.find(p => p.id === camperId) || null;
   }
 
-  // Generate simple camper code based on kevutzah and position
-  generateCamperCode(name: string, bunk: string): string {
-    // Extract kevutzah letter (last word of bunk name)
-    const bunkLetter = bunk.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
-    
-    // Get all existing codes for this bunk to determine next number
-    const profiles = this.getAllCamperProfiles();
-    const bunkProfiles = profiles.filter(p => p.bunkName === bunk);
-    const nextNum = bunkProfiles.length + 1;
-    
-    return `${bunkLetter}${nextNum}`;
+  // Generate secure camper code (6-8 characters)
+  generateSecureCamperCode(bunkLetter: string, position: number): string {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${bunkLetter}${position}${randomSuffix}`;
+  }
+
+  // Generate secure staff code
+  generateSecureStaffCode(bunkLetter: string, position: number): string {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `STF_${bunkLetter}${position}${randomSuffix}`;
   }
 
   // Get all submissions
@@ -148,18 +148,9 @@ class MasterDataStorage {
     return submissions.find(s => s.camperId === camperId && s.date === today) || null;
   }
 
-  // Request edit for today's submission
-  requestEdit(camperId: string, reason: string): void {
-    const submissions = this.getAllSubmissions();
-    const today = this.getTodayString();
-    const submission = submissions.find(s => s.camperId === camperId && s.date === today);
-    
-    if (submission && submission.status === 'submitted') {
-      submission.status = 'edit_requested';
-      submission.editRequestReason = reason;
-      submission.editRequestedAt = new Date().toISOString();
-      this.saveAllSubmissions(submissions);
-    }
+  // Check if camper can edit today's submission (removed edit functionality)
+  canEditTodaySubmission(camperId: string): boolean {
+    return false; // Edit functionality removed
   }
 
   // Approve submission
@@ -234,7 +225,7 @@ class MasterDataStorage {
     bunkId: string;
     todaySubmission: CamperSubmission | null;
     workingMissions: string[];
-    status: 'working' | 'submitted' | 'approved' | 'edit_requested' | 'rejected';
+    status: 'working' | 'submitted' | 'approved' | 'rejected';
     missionCount: number;
     isQualified: boolean;
   }> {
@@ -245,11 +236,11 @@ class MasterDataStorage {
       const todaySubmission = this.getCamperTodaySubmission(profile.id);
       const workingMissions = this.getCamperWorkingMissions(profile.id);
       
-      let status: 'working' | 'submitted' | 'approved' | 'edit_requested' | 'rejected' = 'working';
+      let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
       let missionCount = workingMissions.length;
       
       if (todaySubmission) {
-        status = todaySubmission.status;
+        status = todaySubmission.status === 'edit_requested' ? 'submitted' : todaySubmission.status;
         missionCount = todaySubmission.missions.length;
       }
       

@@ -27,8 +27,8 @@ const AdminAnalytics: React.FC = () => {
     // Calculate camp-wide statistics
     const qualifiedToday = allCampersWithStatus.filter(c => c.isQualified).length;
     const totalSubmissions = allCampersWithStatus.filter(c => c.todaySubmission).length;
-    const pendingApprovals = allCampersWithStatus.filter(c => c.status === 'submitted' || c.status === 'edit_requested').length;
-    const editRequests = allCampersWithStatus.filter(c => c.status === 'edit_requested').length;
+    const pendingApprovals = allCampersWithStatus.filter(c => c.status === 'submitted').length;
+    const editRequests = 0; // Edit functionality removed
 
     const bunkStats: any[] = [];
     const missionStats: any[] = [];
@@ -44,7 +44,7 @@ const AdminAnalytics: React.FC = () => {
       const bunkCampers = allCampersWithStatus.filter(c => c.bunkId === bunk.id);
       const bunkQualified = bunkCampers.filter(c => c.isQualified).length;
       const bunkSubmissions = bunkCampers.filter(c => c.todaySubmission).length;
-      const bunkPending = bunkCampers.filter(c => c.status === 'submitted' || c.status === 'edit_requested').length;
+      const bunkPending = bunkCampers.filter(c => c.status === 'submitted').length;
 
       // Count mission completions for this bunk
       bunkCampers.forEach(camper => {

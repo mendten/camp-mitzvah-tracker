@@ -298,15 +298,13 @@ const StaffDashboard = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Status</span>
-                                <span className={`font-semibold ${
+                                 <span className={`font-semibold ${
                                   camper.status === 'approved' ? 'text-green-600' :
                                   camper.status === 'submitted' ? 'text-yellow-600' :
-                                  camper.status === 'edit_requested' ? 'text-blue-600' :
                                   'text-red-600'
                                 }`}>
                                   {camper.status === 'working' ? 'Working' :
                                    camper.status === 'submitted' ? 'Submitted' :
-                                   camper.status === 'edit_requested' ? 'Edit Requested' :
                                    camper.status === 'approved' ? 'Approved' :
                                    'Not Started'}
                                 </span>

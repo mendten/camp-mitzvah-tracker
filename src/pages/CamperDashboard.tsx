@@ -10,6 +10,7 @@ import MissionCard from '@/components/MissionCard';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
 import { DataStorage } from '@/utils/dataStorage';
 import CamperCalendar from '@/components/CamperCalendar';
+import CamperHistoryView from '@/components/CamperHistoryView';
 
 const CamperDashboard = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const CamperDashboard = () => {
   const [selectedBunk, setSelectedBunk] = useState<any>(null);
   const [missions, setMissions] = useState(DEFAULT_MISSIONS.filter(m => m.isActive));
   const [completedMissions, setCompletedMissions] = useState<Set<string>>(new Set());
-  const [submissionStatus, setSubmissionStatus] = useState<'none' | 'submitted' | 'approved' | 'edit_requested'>('none');
+  const [submissionStatus, setSubmissionStatus] = useState<'none' | 'submitted' | 'approved'>('none');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [submissionHistory, setSubmissionHistory] = useState<any[]>([]);
@@ -47,7 +48,7 @@ const CamperDashboard = () => {
         const submission = DataStorage.getCamperTodaySubmission(camperId);
         
         if (submission) {
-          setSubmissionStatus(submission.status === 'pending' ? 'submitted' : submission.status);
+          setSubmissionStatus(submission.status === 'pending' || submission.status === 'edit_requested' ? 'submitted' : submission.status);
         } else {
           setSubmissionStatus('none');
         }
@@ -64,7 +65,7 @@ const CamperDashboard = () => {
   }, [navigate]);
 
   const toggleMission = (missionId: string) => {
-    if (!selectedCamper || submissionStatus === 'submitted' || submissionStatus === 'approved') return;
+    if (!selectedCamper || submissionStatus !== 'none') return;
     
     const newCompleted = new Set(completedMissions);
     
@@ -106,19 +107,7 @@ const CamperDashboard = () => {
     });
   };
 
-  const handleRequestEdit = () => {
-    if (!selectedCamper) return;
-    
-    // Request edit using new data system
-    DataStorage.requestSubmissionEdit(selectedCamper.id, 'Daily edit request');
-    
-    setSubmissionStatus('edit_requested');
-    
-    toast({
-      title: "Edit Request Submitted",
-      description: "Your edit request has been sent to staff for approval.",
-    });
-  };
+  // Edit functionality removed - submissions are final
 
   const handleLogout = () => {
     localStorage.removeItem('selectedCamper');
@@ -143,16 +132,13 @@ const CamperDashboard = () => {
   
   const dailyRequired = DataStorage.getDailyRequired();
   const canSubmit = completedCount >= dailyRequired && submissionStatus === 'none';
-  const canRequestEdit = submissionStatus === 'submitted';
 
   const getStatusDisplay = () => {
     switch (submissionStatus) {
       case 'approved':
         return { text: '✅ Approved!', color: 'text-green-600', bg: 'bg-green-50' };
       case 'submitted':
-        return { text: '⏳ Pending Approval', color: 'text-yellow-600', bg: 'bg-yellow-50' };
-      case 'edit_requested':
-        return { text: '✏️ Edit Requested', color: 'text-blue-600', bg: 'bg-blue-50' };
+        return { text: '📋 Submitted (View Only)', color: 'text-blue-600', bg: 'bg-blue-50' };
       default:
         return completedCount >= dailyRequired 
           ? { text: '✅ Ready to Submit', color: 'text-green-600', bg: 'bg-green-50' }
@@ -223,42 +209,7 @@ const CamperDashboard = () => {
         )}
 
         {showHistory && (
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-            <CardHeader>
-              <CardTitle>Submission History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {submissionHistory.length === 0 ? (
-                  <p className="text-gray-500 text-center">No submissions yet</p>
-                ) : (
-                  submissionHistory.map((submission, index) => (
-                    <div key={index} className="p-3 border rounded-lg bg-gray-50">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{new Date(submission.date).toLocaleDateString()}</span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          submission.status === 'approved' ? 'bg-green-100 text-green-700' :
-                          submission.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          submission.status === 'edit_requested' ? 'bg-blue-100 text-blue-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {submission.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        {submission.missions.length} missions completed
-                      </p>
-                      {submission.editRequestReason && (
-                        <p className="text-xs text-blue-600 mt-1">
-                          Edit reason: {submission.editRequestReason}
-                        </p>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <CamperHistoryView camperId={selectedCamper.id} />
         )}
 
         {/* Stats Cards */}
@@ -324,17 +275,6 @@ const CamperDashboard = () => {
             <CardTitle className="text-xl flex items-center justify-between">
               <span>Today's Missions</span>
               <div className="flex space-x-2">
-                {canRequestEdit && (
-                  <Button
-                    onClick={handleRequestEdit}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center space-x-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span>Request Edit</span>
-                  </Button>
-                )}
                 {canSubmit && (
                   <Button
                     onClick={handleBulkSubmit}
@@ -348,9 +288,8 @@ const CamperDashboard = () => {
             </CardTitle>
             <p className="text-gray-600">
               Complete at least {dailyRequired} missions to submit for approval!
-              {submissionStatus === 'submitted' && ' (Submitted and awaiting approval)'}
+              {submissionStatus === 'submitted' && ' (Submitted - View only)'}
               {submissionStatus === 'approved' && ' (Approved! Great job!)'}
-              {submissionStatus === 'edit_requested' && ' (Edit request pending)'}
             </p>
           </CardHeader>
           <CardContent>
@@ -363,7 +302,7 @@ const CamperDashboard = () => {
                     completed: completedMissions.has(mission.id)
                   }}
                   onToggle={() => toggleMission(mission.id)}
-                  disabled={submissionStatus === 'submitted' || submissionStatus === 'approved'}
+                  disabled={submissionStatus !== 'none'}
                 />
               ))}
             </div>

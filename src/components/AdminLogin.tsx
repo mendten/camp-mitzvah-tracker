@@ -23,7 +23,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onBack }) => {
     if (username === 'admin' && (password === 'admin123' || password === adminPassword)) {
       onLogin();
     } else {
-      alert('Incorrect credentials. Use username: admin, password: admin123');
+      alert('Incorrect credentials. Please contact administration.');
     }
   };
 
@@ -70,8 +70,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onBack }) => {
               />
             </div>
             <p className="text-xs text-gray-500">
-              Username: <strong>admin</strong><br />
-              Password: <strong>admin123</strong>
+              Contact administration if you need credentials
             </p>
             <Button 
               onClick={handleLogin}

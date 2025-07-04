@@ -94,7 +94,7 @@ const NewCamperDashboard = () => {
       return;
     }
     
-    MasterData.requestEdit(selectedCamper.id, editReason);
+    // Edit functionality removed
     setSubmissionStatus('edit_requested');
     setShowEditForm(false);
     setEditReason('');

@@ -38,7 +38,7 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
     if (accessCode === camperProfile.code) {
       onSelectCamper(selectedCamper);
     } else {
-      alert(`Incorrect access code. Expected: ${camperProfile.code}`);
+      alert('Incorrect access code. Please check your code and try again.');
     }
   };
 

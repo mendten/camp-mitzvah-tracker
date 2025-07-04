@@ -224,13 +224,12 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
                       <p className="text-sm font-medium">{camper.missionCount}/{DEFAULT_MISSIONS.filter(m => m.isActive).length}</p>
                       <p className="text-xs text-gray-500">missions</p>
                     </div>
-                    <Badge className={getStatusColor(camper.status)}>
+                     <Badge className={getStatusColor(camper.status)}>
                       {camper.status === 'working' ? 'Working' :
                        camper.status === 'submitted' ? 'Submitted' :
-                       camper.status === 'edit_requested' ? 'Edit Requested' :
                        camper.status === 'approved' ? 'Approved' :
                        'Not Started'}
-                    </Badge>
+                     </Badge>
                     {camper.isQualified && (
                       <CheckCircle className="h-5 w-5 text-green-500" />
                     )}

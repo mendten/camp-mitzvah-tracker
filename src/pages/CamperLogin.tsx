@@ -58,7 +58,7 @@ const CamperLogin = () => {
       localStorage.setItem('selectedBunk', selectedBunkId);
       navigate('/camper');
     } else {
-      alert(`Incorrect access code. Expected: ${camperProfile.code}`);
+      alert('Incorrect access code. Please check your code and try again.');
     }
   };
 
