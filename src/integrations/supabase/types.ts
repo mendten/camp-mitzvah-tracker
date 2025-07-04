@@ -9,7 +9,272 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bunks: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          id: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      campers: {
+        Row: {
+          access_code: string
+          bunk_id: string
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_code: string
+          bunk_id: string
+          created_at?: string | null
+          id: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_code?: string
+          bunk_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campers_bunk_id_fkey"
+            columns: ["bunk_id"]
+            isOneToOne: false
+            referencedRelation: "bunks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      missions: {
+        Row: {
+          created_at: string | null
+          icon: string
+          id: string
+          is_active: boolean | null
+          is_mandatory: boolean | null
+          sort_order: number | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon: string
+          id: string
+          is_active?: boolean | null
+          is_mandatory?: boolean | null
+          sort_order?: number | null
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          is_mandatory?: boolean | null
+          sort_order?: number | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      session_config: {
+        Row: {
+          current_day: number
+          current_session: number
+          current_week: number
+          id: number
+          session_lengths: number[]
+          updated_at: string | null
+        }
+        Insert: {
+          current_day?: number
+          current_session?: number
+          current_week?: number
+          id?: number
+          session_lengths?: number[]
+          updated_at?: string | null
+        }
+        Update: {
+          current_day?: number
+          current_session?: number
+          current_week?: number
+          id?: number
+          session_lengths?: number[]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          access_code: string
+          bunk_id: string
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_code: string
+          bunk_id: string
+          created_at?: string | null
+          id: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_code?: string
+          bunk_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_bunk_id_fkey"
+            columns: ["bunk_id"]
+            isOneToOne: false
+            referencedRelation: "bunks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submissions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          camper_id: string
+          created_at: string | null
+          date: string
+          edit_request_reason: string | null
+          edit_requested_at: string | null
+          id: string
+          missions: string[]
+          rejected_at: string | null
+          rejected_by: string | null
+          status: string
+          submitted_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          camper_id: string
+          created_at?: string | null
+          date: string
+          edit_request_reason?: string | null
+          edit_requested_at?: string | null
+          id: string
+          missions: string[]
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status: string
+          submitted_at: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          camper_id?: string
+          created_at?: string | null
+          date?: string
+          edit_request_reason?: string | null
+          edit_requested_at?: string | null
+          id?: string
+          missions?: string[]
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status?: string
+          submitted_at?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_camper_id_fkey"
+            columns: ["camper_id"]
+            isOneToOne: false
+            referencedRelation: "campers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_settings: {
+        Row: {
+          admin_password: string
+          daily_required_missions: number
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          admin_password?: string
+          daily_required_missions?: number
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          admin_password?: string
+          daily_required_missions?: number
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      working_missions: {
+        Row: {
+          camper_id: string
+          id: string
+          missions: string[]
+          updated_at: string | null
+        }
+        Insert: {
+          camper_id: string
+          id?: string
+          missions?: string[]
+          updated_at?: string | null
+        }
+        Update: {
+          camper_id?: string
+          id?: string
+          missions?: string[]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "working_missions_camper_id_fkey"
+            columns: ["camper_id"]
+            isOneToOne: true
+            referencedRelation: "campers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,7 +1,8 @@
 
-import { CAMP_DATA } from '@/data/campData';
+import { supabaseService } from '@/services/supabaseService';
+import { SupabaseMigration } from './supabaseMigration';
 
-// Master Data Storage - Single source of truth for all camp data
+// Master Data Storage - Now using Supabase with localStorage fallback during migration
 export interface CamperSubmission {
   id: string;
   camperId: string;
@@ -30,6 +31,7 @@ export interface CamperProfile {
 
 class MasterDataStorage {
   private static instance: MasterDataStorage;
+  private isSupabaseReady: boolean = false;
   
   static getInstance(): MasterDataStorage {
     if (!MasterDataStorage.instance) {
@@ -38,53 +40,90 @@ class MasterDataStorage {
     return MasterDataStorage.instance;
   }
 
+  constructor() {
+    this.initializeSupabase();
+  }
+
+  private async initializeSupabase(): Promise<void> {
+    try {
+      // Check if migration is needed and run it
+      if (!SupabaseMigration.isMigrationCompleted()) {
+        const needsMigration = await SupabaseMigration.needsMigration();
+        if (needsMigration) {
+          await SupabaseMigration.runMigration();
+        } else {
+          // Mark as completed even if no migration was needed
+          localStorage.setItem('supabase_migration_completed', 'true');
+        }
+      }
+      
+      this.isSupabaseReady = true;
+    } catch (error) {
+      console.error('Failed to initialize Supabase:', error);
+      // Continue with localStorage fallback
+    }
+  }
+
   // Generate today's date string
   getTodayString(): string {
     return new Date().toISOString().split('T')[0];
   }
 
   // Get all camper profiles
-  getAllCamperProfiles(): CamperProfile[] {
+  async getAllCamperProfiles(): Promise<CamperProfile[]> {
+    if (this.isSupabaseReady) {
+      try {
+        return await supabaseService.getAllCamperProfiles();
+      } catch (error) {
+        console.error('Error fetching from Supabase, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback to localStorage (for backward compatibility during transition)
     const stored = localStorage.getItem('master_camper_profiles');
     if (stored) {
       return JSON.parse(stored);
     }
     
-    // Initialize from CAMP_DATA with secure codes
-    const profiles: CamperProfile[] = [];
-    
-    CAMP_DATA.forEach((bunk: any) => {
-      bunk.campers.forEach((camper: any, index: number) => {
-        // Extract kevutzah letter from bunk displayName
-        const bunkLetter = bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A';
-        // Generate secure code in SBAA27 format
-        const secureCode = this.generateSecureCamperCode(bunkLetter, index + 1, camper.name);
-        
-        profiles.push({
-          id: camper.id,
-          name: camper.name,
-          code: secureCode,
-          bunkId: bunk.id,
-          bunkName: bunk.displayName
-        });
-      });
-    });
-    
-    this.saveAllCamperProfiles(profiles);
-    return profiles;
+    return [];
+  }
+
+  // Synchronous version for backward compatibility
+  getAllCamperProfilesSync(): CamperProfile[] {
+    // This method is kept for immediate backward compatibility
+    // It will return empty array if Supabase is being used
+    const stored = localStorage.getItem('master_camper_profiles');
+    return stored ? JSON.parse(stored) : [];
   }
 
   saveAllCamperProfiles(profiles: CamperProfile[]): void {
-    localStorage.setItem('master_camper_profiles', JSON.stringify(profiles));
+    // This method is kept for backward compatibility but does nothing
+    // since camper profiles are now managed in Supabase
+    console.warn('saveAllCamperProfiles is deprecated - profiles are managed in Supabase');
   }
 
   // Get camper profile by ID
-  getCamperProfile(camperId: string): CamperProfile | null {
-    const profiles = this.getAllCamperProfiles();
+  async getCamperProfile(camperId: string): Promise<CamperProfile | null> {
+    if (this.isSupabaseReady) {
+      try {
+        return await supabaseService.getCamperProfile(camperId);
+      } catch (error) {
+        console.error('Error fetching camper profile from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    const profiles = this.getAllCamperProfilesSync();
     return profiles.find(p => p.id === camperId) || null;
   }
 
-  // Generate secure camper code (SBAA27 format)
+  // Synchronous version for backward compatibility
+  getCamperProfileSync(camperId: string): CamperProfile | null {
+    const profiles = this.getAllCamperProfilesSync();
+    return profiles.find(p => p.id === camperId) || null;
+  }
+
+  // Generate secure camper code (kept for backward compatibility)
   generateSecureCamperCode(bunkLetter: string, position: number, camperName: string): string {
     const names = camperName.split(' ');
     const firstNameCode = names[0].substring(0, 2).toUpperCase();
@@ -93,7 +132,7 @@ class MasterDataStorage {
     return `${firstNameCode}${lastNameCode}${bunkLetter}${randomNumbers}`;
   }
 
-  // Generate secure staff code (harder format)
+  // Generate secure staff code (kept for backward compatibility)
   generateSecureStaffCode(bunkLetter: string, position: number, staffName: string): string {
     const initials = staffName.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
     const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -101,25 +140,50 @@ class MasterDataStorage {
   }
 
   // Get all submissions
-  getAllSubmissions(): CamperSubmission[] {
+  async getAllSubmissions(): Promise<CamperSubmission[]> {
+    if (this.isSupabaseReady) {
+      try {
+        return await supabaseService.getAllSubmissions();
+      } catch (error) {
+        console.error('Error fetching submissions from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
     const stored = localStorage.getItem('master_submissions');
     return stored ? JSON.parse(stored) : [];
   }
 
-  // Save all submissions
-  saveAllSubmissions(submissions: CamperSubmission[]): void {
-    localStorage.setItem('master_submissions', JSON.stringify(submissions));
+  // Synchronous version for backward compatibility
+  getAllSubmissionsSync(): CamperSubmission[] {
+    const stored = localStorage.getItem('master_submissions');
+    return stored ? JSON.parse(stored) : [];
   }
 
-  // Submit missions for a camper
-  submitCamperMissions(camperId: string, missionIds: string[]): void {
-    const profile = this.getCamperProfile(camperId);
+  // Save all submissions (deprecated - now handled by Supabase)
+  saveAllSubmissions(submissions: CamperSubmission[]): void {
+    console.warn('saveAllSubmissions is deprecated - submissions are managed in Supabase');
+  }
+
+  // Submit missions for a camper (async version)
+  async submitCamperMissions(camperId: string, missionIds: string[]): Promise<void> {
+    if (this.isSupabaseReady) {
+      try {
+        await supabaseService.submitCamperMissions(camperId, missionIds);
+        return;
+      } catch (error) {
+        console.error('Error submitting missions to Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage approach
+    const profile = this.getCamperProfileSync(camperId);
     if (!profile) {
       console.error('Camper profile not found:', camperId);
       return;
     }
 
-    const submissions = this.getAllSubmissions();
+    const submissions = this.getAllSubmissionsSync();
     const today = this.getTodayString();
     
     // Remove any existing submission for today
@@ -139,15 +203,31 @@ class MasterDataStorage {
     };
     
     filtered.push(newSubmission);
-    this.saveAllSubmissions(filtered);
+    localStorage.setItem('master_submissions', JSON.stringify(filtered));
     
     // Clear working missions after submission
     this.clearCamperWorkingMissions(camperId);
   }
 
-  // Get today's submission for a camper
-  getCamperTodaySubmission(camperId: string): CamperSubmission | null {
-    const submissions = this.getAllSubmissions();
+  // Get today's submission for a camper (async version)
+  async getCamperTodaySubmission(camperId: string): Promise<CamperSubmission | null> {
+    if (this.isSupabaseReady) {
+      try {
+        return await supabaseService.getCamperTodaySubmission(camperId);
+      } catch (error) {
+        console.error('Error fetching today submission from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    const submissions = this.getAllSubmissionsSync();
+    const today = this.getTodayString();
+    return submissions.find(s => s.camperId === camperId && s.date === today) || null;
+  }
+
+  // Synchronous version for backward compatibility
+  getCamperTodaySubmissionSync(camperId: string): CamperSubmission | null {
+    const submissions = this.getAllSubmissionsSync();
     const today = this.getTodayString();
     return submissions.find(s => s.camperId === camperId && s.date === today) || null;
   }
@@ -157,71 +237,227 @@ class MasterDataStorage {
     return false; // Edit functionality removed
   }
 
-  // Approve submission
-  approveSubmission(submissionId: string, approvedBy: string): void {
-    const submissions = this.getAllSubmissions();
+  // Approve submission (async version)
+  async approveSubmission(submissionId: string, approvedBy: string): Promise<void> {
+    if (this.isSupabaseReady) {
+      try {
+        await supabaseService.approveSubmission(submissionId, approvedBy);
+        return;
+      } catch (error) {
+        console.error('Error approving submission in Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    const submissions = this.getAllSubmissionsSync();
     const submission = submissions.find(s => s.id === submissionId);
     
     if (submission) {
       submission.status = 'approved';
       submission.approvedAt = new Date().toISOString();
       submission.approvedBy = approvedBy;
-      this.saveAllSubmissions(submissions);
+      localStorage.setItem('master_submissions', JSON.stringify(submissions));
     }
   }
 
-  // Reject submission
-  rejectSubmission(submissionId: string, rejectedBy: string): void {
-    const submissions = this.getAllSubmissions();
+  // Reject submission (async version)
+  async rejectSubmission(submissionId: string, rejectedBy: string): Promise<void> {
+    if (this.isSupabaseReady) {
+      try {
+        await supabaseService.rejectSubmission(submissionId, rejectedBy);
+        return;
+      } catch (error) {
+        console.error('Error rejecting submission in Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    const submissions = this.getAllSubmissionsSync();
     const submission = submissions.find(s => s.id === submissionId);
     
     if (submission) {
       submission.status = 'rejected';
       submission.rejectedAt = new Date().toISOString();
       submission.rejectedBy = rejectedBy;
-      this.saveAllSubmissions(submissions);
+      localStorage.setItem('master_submissions', JSON.stringify(submissions));
     }
   }
 
-  // Get camper's current in-progress missions (not yet submitted)
-  getCamperWorkingMissions(camperId: string): string[] {
+  // Get camper's current in-progress missions (async version)
+  async getCamperWorkingMissions(camperId: string): Promise<string[]> {
+    if (this.isSupabaseReady) {
+      try {
+        return await supabaseService.getCamperWorkingMissions(camperId);
+      } catch (error) {
+        console.error('Error fetching working missions from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    return this.getCamperWorkingMissionsSync(camperId);
+  }
+
+  // Synchronous version for backward compatibility
+  getCamperWorkingMissionsSync(camperId: string): string[] {
     const stored = localStorage.getItem(`working_missions_${camperId}`);
     return stored ? JSON.parse(stored) : [];
   }
 
-  // Save camper's working missions
-  saveCamperWorkingMissions(camperId: string, missionIds: string[]): void {
+  // Save camper's working missions (async version)
+  async saveCamperWorkingMissions(camperId: string, missionIds: string[]): Promise<void> {
+    if (this.isSupabaseReady) {
+      try {
+        await supabaseService.saveCamperWorkingMissions(camperId, missionIds);
+        return;
+      } catch (error) {
+        console.error('Error saving working missions to Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
     localStorage.setItem(`working_missions_${camperId}`, JSON.stringify(missionIds));
   }
 
-  // Clear working missions after submission
-  clearCamperWorkingMissions(camperId: string): void {
+  // Synchronous version for backward compatibility
+  saveCamperWorkingMissionsSync(camperId: string, missionIds: string[]): void {
+    localStorage.setItem(`working_missions_${camperId}`, JSON.stringify(missionIds));
+  }
+
+  // Clear working missions after submission (async version)
+  async clearCamperWorkingMissions(camperId: string): Promise<void> {
+    if (this.isSupabaseReady) {
+      try {
+        await supabaseService.clearCamperWorkingMissions(camperId);
+        return;
+      } catch (error) {
+        console.error('Error clearing working missions from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
     localStorage.removeItem(`working_missions_${camperId}`);
   }
 
-  // Get admin password
-  getAdminPassword(): string {
+  // Get admin password (async version)
+  async getAdminPassword(): Promise<string> {
+    if (this.isSupabaseReady) {
+      try {
+        const settings = await supabaseService.getSystemSettings();
+        return settings.adminPassword;
+      } catch (error) {
+        console.error('Error fetching admin password from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
     return localStorage.getItem('admin_password') || 'admin123';
   }
 
-  // Set admin password
-  setAdminPassword(password: string): void {
+  // Synchronous version for backward compatibility
+  getAdminPasswordSync(): string {
+    return localStorage.getItem('admin_password') || 'admin123';
+  }
+
+  // Set admin password (async version)
+  async setAdminPassword(password: string): Promise<void> {
+    if (this.isSupabaseReady) {
+      try {
+        await supabaseService.updateSystemSettings({ adminPassword: password });
+        return;
+      } catch (error) {
+        console.error('Error updating admin password in Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
     localStorage.setItem('admin_password', password);
   }
 
-  // Get daily required missions
-  getDailyRequired(): number {
+  // Get daily required missions (async version)
+  async getDailyRequired(): Promise<number> {
+    if (this.isSupabaseReady) {
+      try {
+        const settings = await supabaseService.getSystemSettings();
+        return settings.dailyRequired;
+      } catch (error) {
+        console.error('Error fetching daily required from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
     const stored = localStorage.getItem('daily_required_missions');
     return stored ? parseInt(stored) : 3;
   }
 
-  // Set daily required missions
-  setDailyRequired(count: number): void {
+  // Synchronous version for backward compatibility
+  getDailyRequiredSync(): number {
+    const stored = localStorage.getItem('daily_required_missions');
+    return stored ? parseInt(stored) : 3;
+  }
+
+  // Set daily required missions (async version)
+  async setDailyRequired(count: number): Promise<void> {
+    if (this.isSupabaseReady) {
+      try {
+        await supabaseService.updateSystemSettings({ dailyRequired: count });
+        return;
+      } catch (error) {
+        console.error('Error updating daily required in Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
     localStorage.setItem('daily_required_missions', count.toString());
   }
 
-  // Get all campers with their submission status for today
-  getAllCampersWithStatus(): Array<{
+  // Get all campers with their submission status for today (async version)
+  async getAllCampersWithStatus(): Promise<Array<{
+    id: string;
+    name: string;
+    code: string;
+    bunkName: string;
+    bunkId: string;
+    todaySubmission: CamperSubmission | null;
+    workingMissions: string[];
+    status: 'working' | 'submitted' | 'approved' | 'rejected';
+    missionCount: number;
+    isQualified: boolean;
+  }>> {
+    const profiles = await this.getAllCamperProfiles();
+    const dailyRequired = await this.getDailyRequired();
+    
+    const results = [];
+    for (const profile of profiles) {
+      const todaySubmission = await this.getCamperTodaySubmission(profile.id);
+      const workingMissions = await this.getCamperWorkingMissions(profile.id);
+      
+      let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
+      let missionCount = workingMissions.length;
+      
+      if (todaySubmission) {
+        status = todaySubmission.status === 'edit_requested' ? 'submitted' : todaySubmission.status;
+        missionCount = todaySubmission.missions.length;
+      }
+      
+      results.push({
+        id: profile.id,
+        name: profile.name,
+        code: profile.code,
+        bunkName: profile.bunkName,
+        bunkId: profile.bunkId,
+        todaySubmission,
+        workingMissions,
+        status,
+        missionCount,
+        isQualified: missionCount >= dailyRequired
+      });
+    }
+    
+    return results;
+  }
+
+  // Synchronous version for backward compatibility
+  getAllCampersWithStatusSync(): Array<{
     id: string;
     name: string;
     code: string;
@@ -233,12 +469,12 @@ class MasterDataStorage {
     missionCount: number;
     isQualified: boolean;
   }> {
-    const profiles = this.getAllCamperProfiles();
-    const dailyRequired = this.getDailyRequired();
+    const profiles = this.getAllCamperProfilesSync();
+    const dailyRequired = this.getDailyRequiredSync();
     
     return profiles.map(profile => {
-      const todaySubmission = this.getCamperTodaySubmission(profile.id);
-      const workingMissions = this.getCamperWorkingMissions(profile.id);
+      const todaySubmission = this.getCamperTodaySubmissionSync(profile.id);
+      const workingMissions = this.getCamperWorkingMissionsSync(profile.id);
       
       let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
       let missionCount = workingMissions.length;
@@ -263,9 +499,24 @@ class MasterDataStorage {
     });
   }
 
-  // Get submissions that need approval
-  getPendingSubmissions(): CamperSubmission[] {
-    const submissions = this.getAllSubmissions();
+  // Get submissions that need approval (async version)
+  async getPendingSubmissions(): Promise<CamperSubmission[]> {
+    if (this.isSupabaseReady) {
+      try {
+        return await supabaseService.getPendingSubmissions();
+      } catch (error) {
+        console.error('Error fetching pending submissions from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    const submissions = this.getAllSubmissionsSync();
+    return submissions.filter(s => s.status === 'submitted' || s.status === 'edit_requested');
+  }
+
+  // Synchronous version for backward compatibility
+  getPendingSubmissionsSync(): CamperSubmission[] {
+    const submissions = this.getAllSubmissionsSync();
     return submissions.filter(s => s.status === 'submitted' || s.status === 'edit_requested');
   }
 }
