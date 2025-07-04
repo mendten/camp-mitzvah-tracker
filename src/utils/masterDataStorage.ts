@@ -69,23 +69,10 @@ class MasterDataStorage {
     return new Date().toISOString().split('T')[0];
   }
 
-  // Get all camper profiles
-  async getAllCamperProfiles(): Promise<CamperProfile[]> {
-    if (this.isSupabaseReady) {
-      try {
-        return await supabaseService.getAllCamperProfiles();
-      } catch (error) {
-        console.error('Error fetching from Supabase, falling back to localStorage:', error);
-      }
-    }
-    
-    // Fallback to localStorage (for backward compatibility during transition)
-    const stored = localStorage.getItem('master_camper_profiles');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    
-    return [];
+  // Get all camper profiles (keep sync for now)
+  getAllCamperProfiles(): CamperProfile[] {
+    // Use sync method for backward compatibility
+    return this.getAllCamperProfilesSync();
   }
 
   // Synchronous version for backward compatibility
@@ -102,19 +89,10 @@ class MasterDataStorage {
     console.warn('saveAllCamperProfiles is deprecated - profiles are managed in Supabase');
   }
 
-  // Get camper profile by ID
-  async getCamperProfile(camperId: string): Promise<CamperProfile | null> {
-    if (this.isSupabaseReady) {
-      try {
-        return await supabaseService.getCamperProfile(camperId);
-      } catch (error) {
-        console.error('Error fetching camper profile from Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    const profiles = this.getAllCamperProfilesSync();
-    return profiles.find(p => p.id === camperId) || null;
+  // Get camper profile by ID (keep sync for now)
+  getCamperProfile(camperId: string): CamperProfile | null {
+    // Use sync method for backward compatibility
+    return this.getCamperProfileSync(camperId);
   }
 
   // Synchronous version for backward compatibility
@@ -139,19 +117,10 @@ class MasterDataStorage {
     return `STF_${initials}_${bunkLetter}${position}_${randomSuffix}`;
   }
 
-  // Get all submissions
-  async getAllSubmissions(): Promise<CamperSubmission[]> {
-    if (this.isSupabaseReady) {
-      try {
-        return await supabaseService.getAllSubmissions();
-      } catch (error) {
-        console.error('Error fetching submissions from Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    const stored = localStorage.getItem('master_submissions');
-    return stored ? JSON.parse(stored) : [];
+  // Get all submissions (keep sync for now)
+  getAllSubmissions(): CamperSubmission[] {
+    // Use sync method for backward compatibility
+    return this.getAllSubmissionsSync();
   }
 
   // Synchronous version for backward compatibility
@@ -209,20 +178,10 @@ class MasterDataStorage {
     this.clearCamperWorkingMissions(camperId);
   }
 
-  // Get today's submission for a camper (async version)
-  async getCamperTodaySubmission(camperId: string): Promise<CamperSubmission | null> {
-    if (this.isSupabaseReady) {
-      try {
-        return await supabaseService.getCamperTodaySubmission(camperId);
-      } catch (error) {
-        console.error('Error fetching today submission from Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    const submissions = this.getAllSubmissionsSync();
-    const today = this.getTodayString();
-    return submissions.find(s => s.camperId === camperId && s.date === today) || null;
+  // Get today's submission for a camper (keep sync for now)
+  getCamperTodaySubmission(camperId: string): CamperSubmission | null {
+    // Use sync method for backward compatibility
+    return this.getCamperTodaySubmissionSync(camperId);
   }
 
   // Synchronous version for backward compatibility
@@ -283,17 +242,9 @@ class MasterDataStorage {
     }
   }
 
-  // Get camper's current in-progress missions (async version)
-  async getCamperWorkingMissions(camperId: string): Promise<string[]> {
-    if (this.isSupabaseReady) {
-      try {
-        return await supabaseService.getCamperWorkingMissions(camperId);
-      } catch (error) {
-        console.error('Error fetching working missions from Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
+  // Get camper's current in-progress missions (keep sync for now)
+  getCamperWorkingMissions(camperId: string): string[] {
+    // Use sync method for backward compatibility
     return this.getCamperWorkingMissionsSync(camperId);
   }
 
@@ -303,19 +254,10 @@ class MasterDataStorage {
     return stored ? JSON.parse(stored) : [];
   }
 
-  // Save camper's working missions (async version)
-  async saveCamperWorkingMissions(camperId: string, missionIds: string[]): Promise<void> {
-    if (this.isSupabaseReady) {
-      try {
-        await supabaseService.saveCamperWorkingMissions(camperId, missionIds);
-        return;
-      } catch (error) {
-        console.error('Error saving working missions to Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    localStorage.setItem(`working_missions_${camperId}`, JSON.stringify(missionIds));
+  // Save camper's working missions (keep sync for now)
+  saveCamperWorkingMissions(camperId: string, missionIds: string[]): void {
+    // Use sync method for backward compatibility
+    this.saveCamperWorkingMissionsSync(camperId, missionIds);
   }
 
   // Synchronous version for backward compatibility
@@ -338,19 +280,10 @@ class MasterDataStorage {
     localStorage.removeItem(`working_missions_${camperId}`);
   }
 
-  // Get admin password (async version)
-  async getAdminPassword(): Promise<string> {
-    if (this.isSupabaseReady) {
-      try {
-        const settings = await supabaseService.getSystemSettings();
-        return settings.adminPassword;
-      } catch (error) {
-        console.error('Error fetching admin password from Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    return localStorage.getItem('admin_password') || 'admin123';
+  // Get admin password (keep sync for now)
+  getAdminPassword(): string {
+    // Use sync method for backward compatibility
+    return this.getAdminPasswordSync();
   }
 
   // Synchronous version for backward compatibility
@@ -373,20 +306,10 @@ class MasterDataStorage {
     localStorage.setItem('admin_password', password);
   }
 
-  // Get daily required missions (async version)
-  async getDailyRequired(): Promise<number> {
-    if (this.isSupabaseReady) {
-      try {
-        const settings = await supabaseService.getSystemSettings();
-        return settings.dailyRequired;
-      } catch (error) {
-        console.error('Error fetching daily required from Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    const stored = localStorage.getItem('daily_required_missions');
-    return stored ? parseInt(stored) : 3;
+  // Get daily required missions (keep sync for now)
+  getDailyRequired(): number {
+    // Use sync method for backward compatibility
+    return this.getDailyRequiredSync();
   }
 
   // Synchronous version for backward compatibility
@@ -410,8 +333,8 @@ class MasterDataStorage {
     localStorage.setItem('daily_required_missions', count.toString());
   }
 
-  // Get all campers with their submission status for today (async version)
-  async getAllCampersWithStatus(): Promise<Array<{
+  // Get all campers with their submission status for today (keep sync for now)
+  getAllCampersWithStatus(): Array<{
     id: string;
     name: string;
     code: string;
@@ -422,38 +345,9 @@ class MasterDataStorage {
     status: 'working' | 'submitted' | 'approved' | 'rejected';
     missionCount: number;
     isQualified: boolean;
-  }>> {
-    const profiles = await this.getAllCamperProfiles();
-    const dailyRequired = await this.getDailyRequired();
-    
-    const results = [];
-    for (const profile of profiles) {
-      const todaySubmission = await this.getCamperTodaySubmission(profile.id);
-      const workingMissions = await this.getCamperWorkingMissions(profile.id);
-      
-      let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
-      let missionCount = workingMissions.length;
-      
-      if (todaySubmission) {
-        status = todaySubmission.status === 'edit_requested' ? 'submitted' : todaySubmission.status;
-        missionCount = todaySubmission.missions.length;
-      }
-      
-      results.push({
-        id: profile.id,
-        name: profile.name,
-        code: profile.code,
-        bunkName: profile.bunkName,
-        bunkId: profile.bunkId,
-        todaySubmission,
-        workingMissions,
-        status,
-        missionCount,
-        isQualified: missionCount >= dailyRequired
-      });
-    }
-    
-    return results;
+  }> {
+    // Use sync methods for backward compatibility
+    return this.getAllCampersWithStatusSync();
   }
 
   // Synchronous version for backward compatibility
@@ -499,19 +393,10 @@ class MasterDataStorage {
     });
   }
 
-  // Get submissions that need approval (async version)
-  async getPendingSubmissions(): Promise<CamperSubmission[]> {
-    if (this.isSupabaseReady) {
-      try {
-        return await supabaseService.getPendingSubmissions();
-      } catch (error) {
-        console.error('Error fetching pending submissions from Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    const submissions = this.getAllSubmissionsSync();
-    return submissions.filter(s => s.status === 'submitted' || s.status === 'edit_requested');
+  // Get submissions that need approval (keep sync for now)
+  getPendingSubmissions(): CamperSubmission[] {
+    // Use sync method for backward compatibility
+    return this.getPendingSubmissionsSync();
   }
 
   // Synchronous version for backward compatibility
