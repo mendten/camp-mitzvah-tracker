@@ -26,8 +26,8 @@ const AdminSubmissionsManagement = () => {
     filterSubmissions();
   }, [submissions, searchTerm, statusFilter, dateFilter]);
 
-  const loadSubmissions = () => {
-    const allSubmissions = MasterData.getAllSubmissions();
+  const loadSubmissions = async () => {
+    const allSubmissions = await MasterData.getAllSubmissions();
     // Auto-approve all regular submissions that are still 'submitted'
     allSubmissions.forEach(submission => {
       if (submission.status === 'submitted' && !submission.editRequestReason) {
@@ -36,7 +36,7 @@ const AdminSubmissionsManagement = () => {
     });
     
     // Reload after auto-approval
-    const updatedSubmissions = MasterData.getAllSubmissions();
+    const updatedSubmissions = await MasterData.getAllSubmissions();
     setSubmissions(updatedSubmissions.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
   };
 

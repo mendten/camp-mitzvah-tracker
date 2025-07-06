@@ -18,13 +18,13 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Get real completion data for any date
-  const getCompletionDataForDate = (date: Date) => {
+  const getCompletionDataForDate = async (date: Date) => {
     const dateKey = date.toISOString().split('T')[0];
     const todayKey = MasterData.getTodayString();
     
     if (dateKey === todayKey) {
       // Use MasterData for today
-      const todaySubmission = MasterData.getCamperTodaySubmission(camperId);
+      const todaySubmission = await MasterData.getCamperTodaySubmission(camperId);
       const workingMissions = MasterData.getCamperWorkingMissions(camperId);
       const dailyRequired = MasterData.getDailyRequired();
       
@@ -47,7 +47,7 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
       }
     } else {
       // Check historical data
-      const allSubmissions = MasterData.getAllSubmissions();
+      const allSubmissions = await MasterData.getAllSubmissions();
       const daySubmission = allSubmissions.find(s => s.camperId === camperId && s.date === dateKey);
       
       if (daySubmission) {

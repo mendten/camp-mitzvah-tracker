@@ -71,17 +71,20 @@ class MasterDataStorage {
 
   // Get all camper profiles (now properly async)
   async getAllCamperProfiles(): Promise<CamperProfile[]> {
-    if (this.isSupabaseReady) {
-      try {
-        return await supabaseService.getAllCamperProfiles();
-      } catch (error) {
-        console.error('Error fetching camper profiles from Supabase:', error);
-      }
+    try {
+      await this.ensureSupabaseReady();
+      return await supabaseService.getAllCamperProfiles();
+    } catch (error) {
+      console.error('Error fetching camper profiles from Supabase:', error);
+      throw error; // Don't use localStorage fallback - force Supabase
     }
-    
-    // Fallback to localStorage only during transition
-    const stored = localStorage.getItem('master_camper_profiles');
-    return stored ? JSON.parse(stored) : [];
+  }
+
+  // Ensure Supabase is ready
+  private async ensureSupabaseReady(): Promise<void> {
+    if (!this.isSupabaseReady) {
+      await this.initializeSupabase();
+    }
   }
 
   // Synchronous version for immediate backward compatibility (deprecated)
@@ -125,14 +128,20 @@ class MasterDataStorage {
     return `STF_${initials}_${bunkLetter}${position}_${randomSuffix}`;
   }
 
-  // Get all submissions (keep sync for now)
-  getAllSubmissions(): CamperSubmission[] {
-    // Use sync method for backward compatibility
-    return this.getAllSubmissionsSync();
+  // Get all submissions (async version)
+  async getAllSubmissions(): Promise<CamperSubmission[]> {
+    try {
+      await this.ensureSupabaseReady();
+      return await supabaseService.getAllSubmissions();
+    } catch (error) {
+      console.error('Error fetching submissions from Supabase:', error);
+      return [];
+    }
   }
 
-  // Synchronous version for backward compatibility
+  // Synchronous version for backward compatibility (deprecated)
   getAllSubmissionsSync(): CamperSubmission[] {
+    console.warn('getAllSubmissionsSync is deprecated - use async getAllSubmissions instead');
     const stored = localStorage.getItem('master_submissions');
     return stored ? JSON.parse(stored) : [];
   }
@@ -186,14 +195,20 @@ class MasterDataStorage {
     this.clearCamperWorkingMissions(camperId);
   }
 
-  // Get today's submission for a camper (keep sync for now)
-  getCamperTodaySubmission(camperId: string): CamperSubmission | null {
-    // Use sync method for backward compatibility
-    return this.getCamperTodaySubmissionSync(camperId);
+  // Get today's submission for a camper (async version)
+  async getCamperTodaySubmission(camperId: string): Promise<CamperSubmission | null> {
+    try {
+      await this.ensureSupabaseReady();
+      return await supabaseService.getCamperTodaySubmission(camperId);
+    } catch (error) {
+      console.error('Error fetching today submission from Supabase:', error);
+      return null;
+    }
   }
 
-  // Synchronous version for backward compatibility
+  // Synchronous version for backward compatibility (deprecated)
   getCamperTodaySubmissionSync(camperId: string): CamperSubmission | null {
+    console.warn('getCamperTodaySubmissionSync is deprecated - use async getCamperTodaySubmission instead');
     const submissions = this.getAllSubmissionsSync();
     const today = this.getTodayString();
     return submissions.find(s => s.camperId === camperId && s.date === today) || null;

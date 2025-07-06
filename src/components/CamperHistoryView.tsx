@@ -16,12 +16,16 @@ const CamperHistoryView: React.FC<CamperHistoryViewProps> = ({ camperId }) => {
     loadSubmissions();
   }, [camperId]);
 
-  const loadSubmissions = () => {
-    const allSubmissions = MasterData.getAllSubmissions();
-    const camperSubmissions = allSubmissions
-      .filter(s => s.camperId === camperId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setSubmissions(camperSubmissions);
+  const loadSubmissions = async () => {
+    try {
+      const allSubmissions = await MasterData.getAllSubmissions();
+      const camperSubmissions = allSubmissions
+        .filter(s => s.camperId === camperId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setSubmissions(camperSubmissions);
+    } catch (error) {
+      console.error('Error loading submissions:', error);
+    }
   };
 
   const getMissionTitles = (missionIds: string[]) => {
