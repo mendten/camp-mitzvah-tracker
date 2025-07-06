@@ -21,6 +21,7 @@ const CamperManagement = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedCamper, setSelectedCamper] = useState<CamperProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [newCamper, setNewCamper] = useState({
     name: '',
     bunkId: '',
@@ -35,9 +36,21 @@ const CamperManagement = () => {
     filterCampers();
   }, [campers, searchTerm, bunkFilter]);
 
-  const loadCampers = () => {
-    const allCampers = MasterData.getAllCamperProfiles();
-    setCampers(allCampers);
+  const loadCampers = async () => {
+    setLoading(true);
+    try {
+      const allCampers = await MasterData.getAllCamperProfiles();
+      setCampers(allCampers);
+    } catch (error) {
+      console.error('Error loading campers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load campers",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filterCampers = () => {

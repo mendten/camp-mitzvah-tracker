@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,10 +16,26 @@ interface CamperSelectorProps {
 const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper, onBack }) => {
   const [selectedCamper, setSelectedCamper] = useState<string>('');
   const [accessCode, setAccessCode] = useState<string>('');
+  const [campers, setCampers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Get campers from MasterData
-  const allProfiles = MasterData.getAllCamperProfiles();
-  const campers = allProfiles.filter(profile => profile.bunkId === bunkId);
+  useEffect(() => {
+    loadCampers();
+  }, [bunkId]);
+
+  const loadCampers = async () => {
+    setLoading(true);
+    try {
+      const allProfiles = await MasterData.getAllCamperProfiles();
+      const bunkCampers = allProfiles.filter(profile => profile.bunkId === bunkId);
+      setCampers(bunkCampers);
+    } catch (error) {
+      console.error('Error loading campers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const bunkName = campers.length > 0 ? campers[0].bunkName : '';
 
   const handleLogin = () => {
@@ -27,7 +43,7 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
       return;
     }
 
-    const camperProfile = MasterData.getCamperProfile(selectedCamper);
+    const camperProfile = campers.find(c => c.id === selectedCamper);
     
     if (!camperProfile) {
       alert('Camper not found!');
@@ -41,6 +57,17 @@ const CamperSelector: React.FC<CamperSelectorProps> = ({ bunkId, onSelectCamper,
       alert('Incorrect access code. Please check your code and try again.');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading campers...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 flex items-center justify-center p-4">

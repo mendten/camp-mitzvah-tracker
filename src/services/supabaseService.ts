@@ -541,6 +541,85 @@ class SupabaseService {
     };
   }
 
+  // Get camper's weekly points
+  async getCamperWeeklyPoints(camperId: string, week: number, session: number): Promise<{
+    totalPoints: number;
+    missionsCompleted: number;
+    weekNumber: number;
+    sessionNumber: number;
+  } | null> {
+    const { data, error } = await supabase
+      .from('camper_weekly_points')
+      .select('*')
+      .eq('camper_id', camperId)
+      .eq('week_number', week)
+      .eq('session_number', session)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null; // No data found
+      }
+      console.error('Error fetching weekly points:', error);
+      return null;
+    }
+    
+    return {
+      totalPoints: data.total_points,
+      missionsCompleted: data.missions_completed,
+      weekNumber: data.week_number,
+      sessionNumber: data.session_number
+    };
+  }
+
+  // Get all camper's weekly points history
+  async getCamperAllWeeklyPoints(camperId: string): Promise<Array<{
+    totalPoints: number;
+    missionsCompleted: number;
+    weekNumber: number;
+    sessionNumber: number;
+  }>> {
+    const { data, error } = await supabase
+      .from('camper_weekly_points')
+      .select('*')
+      .eq('camper_id', camperId)
+      .order('session_number')
+      .order('week_number');
+    
+    if (error) {
+      console.error('Error fetching all weekly points:', error);
+      return [];
+    }
+    
+    return data.map(item => ({
+      totalPoints: item.total_points,
+      missionsCompleted: item.missions_completed,
+      weekNumber: item.week_number,
+      sessionNumber: item.session_number
+    }));
+  }
+
+  // Update camper's weekly points
+  async updateCamperWeeklyPoints(camperId: string, week: number, session: number, points: number, missions: number): Promise<void> {
+    const { error } = await supabase
+      .from('camper_weekly_points')
+      .upsert({
+        camper_id: camperId,
+        week_number: week,
+        session_number: session,
+        total_points: points,
+        missions_completed: missions,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'camper_id,week_number,session_number'
+      });
+    
+    if (error) {
+      console.error('Error updating weekly points:', error);
+      throw error;
+    }
+  }
+
   // Update system settings
   async updateSystemSettings(settings: {
     dailyRequired?: number;

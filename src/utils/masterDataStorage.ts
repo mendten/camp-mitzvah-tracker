@@ -69,24 +69,32 @@ class MasterDataStorage {
     return new Date().toISOString().split('T')[0];
   }
 
-  // Get all camper profiles (keep sync for now)
-  getAllCamperProfiles(): CamperProfile[] {
-    // Use sync method for backward compatibility
-    return this.getAllCamperProfilesSync();
-  }
-
-  // Synchronous version for backward compatibility
-  getAllCamperProfilesSync(): CamperProfile[] {
-    // This method is kept for immediate backward compatibility
-    // It will return empty array if Supabase is being used
+  // Get all camper profiles (now properly async)
+  async getAllCamperProfiles(): Promise<CamperProfile[]> {
+    if (this.isSupabaseReady) {
+      try {
+        return await supabaseService.getAllCamperProfiles();
+      } catch (error) {
+        console.error('Error fetching camper profiles from Supabase:', error);
+      }
+    }
+    
+    // Fallback to localStorage only during transition
     const stored = localStorage.getItem('master_camper_profiles');
     return stored ? JSON.parse(stored) : [];
   }
 
-  saveAllCamperProfiles(profiles: CamperProfile[]): void {
-    // This method is kept for backward compatibility but does nothing
-    // since camper profiles are now managed in Supabase
-    console.warn('saveAllCamperProfiles is deprecated - profiles are managed in Supabase');
+  // Synchronous version for immediate backward compatibility (deprecated)
+  getAllCamperProfilesSync(): CamperProfile[] {
+    console.warn('getAllCamperProfilesSync is deprecated - use async getAllCamperProfiles instead');
+    const stored = localStorage.getItem('master_camper_profiles');
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  // Save camper profiles to Supabase
+  async saveAllCamperProfiles(profiles: CamperProfile[]): Promise<void> {
+    console.warn('saveAllCamperProfiles is deprecated - individual camper operations should be used');
+    // This method is now deprecated since profiles should be managed individually
   }
 
   // Get camper profile by ID (keep sync for now)
@@ -191,9 +199,9 @@ class MasterDataStorage {
     return submissions.find(s => s.camperId === camperId && s.date === today) || null;
   }
 
-  // Check if camper can edit today's submission (removed edit functionality)
+  // Check if camper can edit today's submission (editing disabled for campers)
   canEditTodaySubmission(camperId: string): boolean {
-    return false; // Edit functionality removed
+    return false; // Camper editing is now disabled
   }
 
   // Approve submission (async version)

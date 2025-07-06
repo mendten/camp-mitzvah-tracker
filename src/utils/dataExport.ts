@@ -99,8 +99,8 @@ export function getCamperStats(camperId: string) {
   };
 }
 
-export function exportAllData(): FullExportData {
-  const allCamperProfiles = MasterData.getAllCamperProfiles();
+export async function exportAllData(): Promise<FullExportData> {
+  const allCamperProfiles = await MasterData.getAllCamperProfiles();
   const allSubmissions = MasterData.getAllSubmissions();
   
   const allCampers = allCamperProfiles.map(profile => {
@@ -209,8 +209,8 @@ export function downloadCSV(data: any[], filename: string) {
   window.URL.revokeObjectURL(url);
 }
 
-export function downloadFullReport() {
-  const fullData = exportAllData();
+export async function downloadFullReport() {
+  const fullData = await exportAllData();
   
   // Export campers data
   downloadCSV(fullData.campers, `campers-session-${fullData.session}`);

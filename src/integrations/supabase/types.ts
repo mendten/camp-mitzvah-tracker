@@ -33,6 +33,39 @@ export type Database = {
         }
         Relationships: []
       }
+      camper_weekly_points: {
+        Row: {
+          camper_id: string
+          created_at: string | null
+          id: string
+          missions_completed: number | null
+          session_number: number
+          total_points: number | null
+          updated_at: string | null
+          week_number: number
+        }
+        Insert: {
+          camper_id: string
+          created_at?: string | null
+          id?: string
+          missions_completed?: number | null
+          session_number: number
+          total_points?: number | null
+          updated_at?: string | null
+          week_number: number
+        }
+        Update: {
+          camper_id?: string
+          created_at?: string | null
+          id?: string
+          missions_completed?: number | null
+          session_number?: number
+          total_points?: number | null
+          updated_at?: string | null
+          week_number?: number
+        }
+        Relationships: []
+      }
       campers: {
         Row: {
           access_code: string

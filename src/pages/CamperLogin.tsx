@@ -14,8 +14,13 @@ const CamperLogin = () => {
   const [selectedCamper, setSelectedCamper] = useState<string>('');
   const [accessCode, setAccessCode] = useState<string>('');
   const [campers, setCampers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    loadCampersForBunk();
+  }, [navigate]);
+
+  const loadCampersForBunk = async () => {
     console.log('CamperLogin - checking localStorage...');
     const bunkId = localStorage.getItem('selectedBunk');
     console.log('Found bunkId in localStorage:', bunkId);
@@ -27,12 +32,19 @@ const CamperLogin = () => {
     }
     
     setSelectedBunkId(bunkId);
+    setLoading(true);
     
-    // Get campers for this bunk from MasterData
-    const allProfiles = MasterData.getAllCamperProfiles();
-    const bunkCampers = allProfiles.filter(profile => profile.bunkId === bunkId);
-    setCampers(bunkCampers);
-  }, [navigate]);
+    try {
+      // Get campers for this bunk from MasterData
+      const allProfiles = await MasterData.getAllCamperProfiles();
+      const bunkCampers = allProfiles.filter(profile => profile.bunkId === bunkId);
+      setCampers(bunkCampers);
+    } catch (error) {
+      console.error('Error loading campers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCamperSelect = (camperId: string) => {
     setSelectedCamper(camperId);
@@ -44,7 +56,7 @@ const CamperLogin = () => {
     }
 
     // Get the camper profile to verify the code
-    const camperProfile = MasterData.getCamperProfile(selectedCamper);
+    const camperProfile = campers.find(c => c.id === selectedCamper);
     
     if (!camperProfile) {
       alert('Camper not found!');
@@ -67,8 +79,15 @@ const CamperLogin = () => {
     navigate('/');
   };
 
-  if (!selectedBunkId) {
-    return <div>Loading...</div>;
+  if (!selectedBunkId || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading campers...</p>
+        </div>
+      </div>
+    );
   }
 
   const selectedBunk = campers.length > 0 ? campers[0].bunkName : '';
