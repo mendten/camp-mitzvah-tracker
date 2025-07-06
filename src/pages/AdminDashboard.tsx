@@ -19,7 +19,7 @@ import AdminSettings from '@/components/AdminSettings';
 import PublicDashboard from '@/components/PublicDashboard';
 import AdminCardModal from '@/components/AdminCardModal';
 import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrewDate';
-import { MasterData } from '@/utils/masterDataStorage';
+import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
