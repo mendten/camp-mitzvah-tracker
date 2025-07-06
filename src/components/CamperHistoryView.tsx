@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
+import { supabaseService, CamperSubmission } from '@/services/supabaseService';
 import { DEFAULT_MISSIONS } from '@/data/campData';
 
 interface CamperHistoryViewProps {
@@ -18,10 +18,7 @@ const CamperHistoryView: React.FC<CamperHistoryViewProps> = ({ camperId }) => {
 
   const loadSubmissions = async () => {
     try {
-      const allSubmissions = await MasterData.getAllSubmissions();
-      const camperSubmissions = allSubmissions
-        .filter(s => s.camperId === camperId)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const camperSubmissions = await supabaseService.getCamperSubmissions(camperId);
       setSubmissions(camperSubmissions);
     } catch (error) {
       console.error('Error loading submissions:', error);
@@ -48,15 +45,16 @@ const CamperHistoryView: React.FC<CamperHistoryViewProps> = ({ camperId }) => {
   };
 
   const getStatusBadge = (status: string) => {
+    // With auto-approval, all submissions should show as approved
     switch (status) {
       case 'approved':
         return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
       case 'submitted':
-        return <Badge className="bg-yellow-100 text-yellow-800">Submitted</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Approved</Badge>; // Treat as approved
       case 'rejected':
         return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
     }
   };
 
@@ -67,7 +65,7 @@ const CamperHistoryView: React.FC<CamperHistoryViewProps> = ({ camperId }) => {
           <Calendar className="h-5 w-5 text-blue-600" />
           <span>Mission History</span>
         </CardTitle>
-        <p className="text-gray-600">All your past submissions from Supabase</p>
+        <p className="text-gray-600">All your past submissions</p>
       </CardHeader>
       <CardContent>
         {submissions.length === 0 ? (

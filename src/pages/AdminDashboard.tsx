@@ -62,7 +62,8 @@ const AdminDashboard = () => {
             let missionCount = workingMissions.length;
             
             if (todaySubmission) {
-              status = todaySubmission.status === 'edit_requested' ? 'submitted' : todaySubmission.status;
+              // With auto-approval, all submissions are approved
+              status = 'approved';
               missionCount = todaySubmission.missions.length;
             }
             
@@ -83,8 +84,8 @@ const AdminDashboard = () => {
 
         setAllCampersWithStatus(campersWithStatus);
         
-        // Filter pending submissions
-        const pending = submissions.filter(s => s.status === 'submitted' || s.status === 'edit_requested');
+        // Filter pending submissions (none with auto-approval)
+        const pending: CamperSubmission[] = [];
         setPendingSubmissions(pending);
         
       } catch (error) {
@@ -221,9 +222,9 @@ const AdminDashboard = () => {
           >
             <CardContent className="p-6 text-center">
               <BarChart3 className="h-12 w-12 mx-auto text-purple-600 mb-2" />
-              <div className="text-3xl font-bold text-gray-900">{pendingSubmissions.length}</div>
-              <p className="text-gray-600">Pending Edit Requests</p>
-              <p className="text-xs text-purple-600 mt-1">Click to review</p>
+              <div className="text-3xl font-bold text-gray-900">0</div>
+              <p className="text-gray-600">Pending Submissions</p>
+              <p className="text-xs text-purple-600 mt-1">Auto-approved system</p>
             </CardContent>
           </Card>
           

@@ -151,7 +151,7 @@ class MasterDataStorage {
     console.warn('saveAllSubmissions is deprecated - submissions are managed in Supabase');
   }
 
-  // Submit missions for a camper (async version)
+  // Submit missions for a camper (async - auto-approved)
   async submitCamperMissions(camperId: string, missionIds: string[]): Promise<void> {
     if (this.isSupabaseReady) {
       try {
@@ -162,7 +162,7 @@ class MasterDataStorage {
       }
     }
     
-    // Fallback to localStorage approach
+    // Fallback to localStorage approach (auto-approved)
     const profile = this.getCamperProfileSync(camperId);
     if (!profile) {
       console.error('Camper profile not found:', camperId);
@@ -175,7 +175,7 @@ class MasterDataStorage {
     // Remove any existing submission for today
     const filtered = submissions.filter(s => !(s.camperId === camperId && s.date === today));
     
-    // Add new submission
+    // Add new submission with auto-approval
     const newSubmission: CamperSubmission = {
       id: `sub_${camperId}_${today}_${Date.now()}`,
       camperId,
@@ -184,8 +184,10 @@ class MasterDataStorage {
       bunkName: profile.bunkName,
       date: today,
       missions: missionIds,
-      status: 'submitted',
-      submittedAt: new Date().toISOString()
+      status: 'approved', // Auto-approve all submissions
+      submittedAt: new Date().toISOString(),
+      approvedAt: new Date().toISOString(),
+      approvedBy: 'system'
     };
     
     filtered.push(newSubmission);
@@ -416,16 +418,16 @@ class MasterDataStorage {
     });
   }
 
-  // Get submissions that need approval (keep sync for now)
+  // Get submissions that need approval (deprecated - all submissions are auto-approved)
   getPendingSubmissions(): CamperSubmission[] {
-    // Use sync method for backward compatibility
-    return this.getPendingSubmissionsSync();
+    // With auto-approval, there are no longer pending submissions
+    return [];
   }
 
-  // Synchronous version for backward compatibility
+  // Synchronous version for backward compatibility (deprecated)
   getPendingSubmissionsSync(): CamperSubmission[] {
-    const submissions = this.getAllSubmissionsSync();
-    return submissions.filter(s => s.status === 'submitted' || s.status === 'edit_requested');
+    // With auto-approval, there are no longer pending submissions
+    return [];
   }
 }
 

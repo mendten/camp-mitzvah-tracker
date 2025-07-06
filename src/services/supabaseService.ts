@@ -288,7 +288,7 @@ class SupabaseService {
     }
   }
 
-  // Submit camper missions
+  // Submit camper missions (auto-approved)
   async submitCamperMissions(camperId: string, missionIds: string[]): Promise<void> {
     const profile = await this.getCamperProfile(camperId);
     if (!profile) {
@@ -298,7 +298,7 @@ class SupabaseService {
     const today = this.getTodayString();
     const submissionId = `sub_${camperId}_${today}_${Date.now()}`;
     
-    // Insert the submission
+    // Insert the submission with auto-approval
     const { error } = await supabase
       .from('submissions')
       .upsert({
@@ -306,8 +306,10 @@ class SupabaseService {
         camper_id: camperId,
         date: today,
         missions: missionIds,
-        status: 'submitted',
-        submitted_at: new Date().toISOString()
+        status: 'approved', // Auto-approve all submissions
+        submitted_at: new Date().toISOString(),
+        approved_at: new Date().toISOString(),
+        approved_by: 'system'
       }, {
         onConflict: 'camper_id,date'
       });
@@ -436,53 +438,10 @@ class SupabaseService {
     });
   }
 
-  // Get pending submissions
+  // Get pending submissions (deprecated - all submissions are auto-approved)
   async getPendingSubmissions(): Promise<CamperSubmission[]> {
-    const { data, error } = await supabase
-      .from('submissions')
-      .select(`
-        id,
-        camper_id,
-        date,
-        missions,
-        status,
-        submitted_at,
-        edit_request_reason,
-        edit_requested_at,
-        approved_at,
-        approved_by,
-        rejected_at,
-        rejected_by,
-        campers!inner(name, access_code, bunks!inner(display_name))
-      `)
-      .in('status', ['submitted', 'edit_requested'])
-      .order('submitted_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching pending submissions:', error);
-      return [];
-    }
-    
-    return data.map(submission => {
-      const camper = (submission as any).campers;
-      return {
-        id: submission.id,
-        camperId: submission.camper_id,
-        camperName: camper.name,
-        camperCode: camper.access_code,
-        bunkName: camper.bunks.display_name,
-        date: submission.date,
-        missions: submission.missions,
-        status: submission.status as 'submitted' | 'approved' | 'edit_requested' | 'rejected',
-        submittedAt: submission.submitted_at,
-        editRequestReason: submission.edit_request_reason,
-        editRequestedAt: submission.edit_requested_at,
-        approvedAt: submission.approved_at,
-        approvedBy: submission.approved_by,
-        rejectedAt: submission.rejected_at,
-        rejectedBy: submission.rejected_by
-      };
-    });
+    // With auto-approval, there are no longer pending submissions
+    return [];
   }
 
   // Approve submission
@@ -644,6 +603,98 @@ class SupabaseService {
       console.error('Error updating system settings:', error);
       throw error;
     }
+  }
+
+  // Edit existing submission (admin only)
+  async editSubmission(submissionId: string, updates: {
+    missions?: string[];
+    date?: string;
+    status?: 'submitted' | 'approved' | 'edit_requested' | 'rejected';
+  }): Promise<void> {
+    const updateData: any = {};
+    
+    if (updates.missions !== undefined) {
+      updateData.missions = updates.missions;
+    }
+    
+    if (updates.date !== undefined) {
+      updateData.date = updates.date;
+    }
+    
+    if (updates.status !== undefined) {
+      updateData.status = updates.status;
+    }
+    
+    updateData.updated_at = new Date().toISOString();
+    
+    const { error } = await supabase
+      .from('submissions')
+      .update(updateData)
+      .eq('id', submissionId);
+    
+    if (error) {
+      console.error('Error editing submission:', error);
+      throw error;
+    }
+  }
+
+  // Get camper submissions for a specific date range
+  async getCamperSubmissions(camperId: string, startDate?: string, endDate?: string): Promise<CamperSubmission[]> {
+    let query = supabase
+      .from('submissions')
+      .select(`
+        id,
+        camper_id,
+        date,
+        missions,
+        status,
+        submitted_at,
+        edit_request_reason,
+        edit_requested_at,
+        approved_at,
+        approved_by,
+        rejected_at,
+        rejected_by,
+        campers!inner(name, access_code, bunks!inner(display_name))
+      `)
+      .eq('camper_id', camperId)
+      .order('date', { ascending: false });
+    
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+    
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching camper submissions:', error);
+      return [];
+    }
+    
+    return data.map(submission => {
+      const camper = (submission as any).campers;
+      return {
+        id: submission.id,
+        camperId: submission.camper_id,
+        camperName: camper.name,
+        camperCode: camper.access_code,
+        bunkName: camper.bunks.display_name,
+        date: submission.date,
+        missions: submission.missions,
+        status: submission.status as 'submitted' | 'approved' | 'edit_requested' | 'rejected',
+        submittedAt: submission.submitted_at,
+        editRequestReason: submission.edit_request_reason,
+        editRequestedAt: submission.edit_requested_at,
+        approvedAt: submission.approved_at,
+        approvedBy: submission.approved_by,
+        rejectedAt: submission.rejected_at,
+        rejectedBy: submission.rejected_by
+      };
+    });
   }
 }
 

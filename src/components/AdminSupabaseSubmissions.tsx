@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Download, RefreshCw } from 'lucide-react';
+import { Search, Download, RefreshCw, Edit } from 'lucide-react';
 import { supabaseService, CamperSubmission } from '@/services/supabaseService';
 import { DEFAULT_MISSIONS } from '@/data/campData';
+import AdminSubmissionEditModal from './AdminSubmissionEditModal';
 
 const AdminSupabaseSubmissions = () => {
   const [submissions, setSubmissions] = useState<CamperSubmission[]>([]);
@@ -16,6 +17,7 @@ const AdminSupabaseSubmissions = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [editingSubmission, setEditingSubmission] = useState<CamperSubmission | null>(null);
 
   useEffect(() => {
     loadSubmissions();
@@ -84,17 +86,18 @@ const AdminSupabaseSubmissions = () => {
   };
 
   const getStatusBadge = (status: string) => {
+    // With auto-approval, most submissions should show as approved
     switch (status) {
       case 'approved':
         return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
       case 'submitted':
-        return <Badge className="bg-yellow-100 text-yellow-800">Submitted</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Approved</Badge>; // Treat as approved
       case 'edit_requested':
         return <Badge className="bg-blue-100 text-blue-800">Edit Requested</Badge>;
       case 'rejected':
         return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
     }
   };
 
@@ -129,146 +132,174 @@ const AdminSupabaseSubmissions = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  return (
-    <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Direct Supabase Submissions</span>
-          <div className="flex items-center space-x-2">
-            <Button onClick={loadSubmissions} size="sm" variant="outline" disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button onClick={exportData} size="sm" className="bg-green-600 hover:bg-green-700">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="grid md:grid-cols-4 gap-4 mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search campers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="submitted">Submitted</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="edit_requested">Edit Requested</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by date" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Dates</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="yesterday">Yesterday</SelectItem>
-              <SelectItem value="week">Past Week</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="text-sm text-gray-600 flex items-center">
-            Results: {filteredSubmissions.length} of {submissions.length}
-          </div>
-        </div>
+  const handleEditSubmission = (submission: CamperSubmission) => {
+    setEditingSubmission(submission);
+  };
 
-        {/* Submissions Table */}
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>Loading submissions from Supabase...</p>
+  const handleSubmissionUpdated = () => {
+    loadSubmissions(); // Refresh the data
+  };
+
+  return (
+    <>
+      <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Direct Supabase Submissions</span>
+            <div className="flex items-center space-x-2">
+              <Button onClick={loadSubmissions} size="sm" variant="outline" disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button onClick={exportData} size="sm" className="bg-green-600 hover:bg-green-700">
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Filters */}
+          <div className="grid md:grid-cols-4 gap-4 mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search campers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="edit_requested">Edit Requested</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Dates</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="week">Past Week</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-gray-600 flex items-center">
+              Results: {filteredSubmissions.length} of {submissions.length}
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Camper</TableHead>
-                  <TableHead>Bunk</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Missions</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSubmissions.map((submission) => (
-                  <TableRow key={submission.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{submission.camperName}</div>
-                        <div className="text-sm text-gray-500">{submission.camperCode}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{submission.bunkName}</TableCell>
-                    <TableCell>
-                      {new Date(submission.date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{submission.missions.length} missions</div>
-                        <div className="text-xs text-gray-500 max-w-xs truncate">
-                          {getMissionTitles(submission.missions)}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(submission.status)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {new Date(submission.submittedAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(submission.submittedAt).toLocaleTimeString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs">
-                        {submission.approvedAt && (
-                          <div className="text-green-600">
-                            Approved: {new Date(submission.approvedAt).toLocaleDateString()}
-                          </div>
-                        )}
-                        {submission.rejectedAt && (
-                          <div className="text-red-600">
-                            Rejected: {new Date(submission.rejectedAt).toLocaleDateString()}
-                          </div>
-                        )}
-                        {submission.editRequestReason && (
-                          <div className="text-blue-600">
-                            Edit: {submission.editRequestReason}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
+
+          {/* Submissions Table */}
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p>Loading submissions from Supabase...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Camper</TableHead>
+                    <TableHead>Bunk</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Missions</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            
-            {filteredSubmissions.length === 0 && !loading && (
-              <div className="text-center py-8 text-gray-500">
-                <p>No submissions found matching your filters</p>
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                </TableHeader>
+                <TableBody>
+                  {filteredSubmissions.map((submission) => (
+                    <TableRow key={submission.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{submission.camperName}</div>
+                          <div className="text-sm text-gray-500">{submission.camperCode}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{submission.bunkName}</TableCell>
+                      <TableCell>
+                        {new Date(submission.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{submission.missions.length} missions</div>
+                          <div className="text-xs text-gray-500 max-w-xs truncate">
+                            {getMissionTitles(submission.missions)}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(submission.status)}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(submission.submittedAt).toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(submission.submittedAt).toLocaleTimeString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditSubmission(submission)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Edit className="h-3 w-3" />
+                            <span>Edit</span>
+                          </Button>
+                        </div>
+                        <div className="text-xs mt-1">
+                          {submission.approvedAt && (
+                            <div className="text-green-600">
+                              Approved: {new Date(submission.approvedAt).toLocaleDateString()}
+                            </div>
+                          )}
+                          {submission.rejectedAt && (
+                            <div className="text-red-600">
+                              Rejected: {new Date(submission.rejectedAt).toLocaleDateString()}
+                            </div>
+                          )}
+                          {submission.editRequestReason && (
+                            <div className="text-blue-600">
+                              Edit: {submission.editRequestReason}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {filteredSubmissions.length === 0 && !loading && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No submissions found matching your filters</p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AdminSubmissionEditModal
+        isOpen={editingSubmission !== null}
+        onClose={() => setEditingSubmission(null)}
+        submission={editingSubmission}
+        onSubmissionUpdated={handleSubmissionUpdated}
+      />
+    </>
   );
 };
 
