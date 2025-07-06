@@ -35,16 +35,19 @@ const NewCamperDashboard = () => {
         setSelectedCamper(camper);
         
         // Check today's submission status
-        const todaySubmission = MasterData.getCamperTodaySubmission(camperId);
-        if (todaySubmission) {
-          setSubmissionStatus(todaySubmission.status);
-          setWorkingMissions(new Set(todaySubmission.missions));
-        } else {
-          // Load working missions
-          const working = MasterData.getCamperWorkingMissions(camperId);
-          setWorkingMissions(new Set(working));
-          setSubmissionStatus('working');
-        }
+        const loadTodaySubmission = async () => {
+          const todaySubmission = await MasterData.getCamperTodaySubmission(camperId);
+          if (todaySubmission) {
+            setSubmissionStatus(todaySubmission.status);
+            setWorkingMissions(new Set(todaySubmission.missions));
+          } else {
+            // Load working missions
+            const working = MasterData.getCamperWorkingMissions(camperId);
+            setWorkingMissions(new Set(working));
+            setSubmissionStatus('working');
+          }
+        };
+        loadTodaySubmission();
       } else {
         navigate('/');
       }
@@ -69,11 +72,11 @@ const NewCamperDashboard = () => {
     MasterData.saveCamperWorkingMissions(selectedCamper.id, [...newWorking]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedCamper || workingMissions.size < dailyRequired) return;
     
     // Submit missions using master data
-    MasterData.submitCamperMissions(selectedCamper.id, [...workingMissions]);
+    await MasterData.submitCamperMissions(selectedCamper.id, [...workingMissions]);
     
     // Update status
     setSubmissionStatus('submitted');

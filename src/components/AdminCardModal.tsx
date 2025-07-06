@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, CheckCircle, Clock, Shield } from 'lucide-react';
-import { MasterData } from '@/utils/masterDataStorage';
+import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
 
 interface AdminCardModalProps {
   isOpen: boolean;
@@ -13,9 +13,17 @@ interface AdminCardModalProps {
 }
 
 const AdminCardModal: React.FC<AdminCardModalProps> = ({ isOpen, onClose, type }) => {
-  const allCampers = MasterData.getAllCampersWithStatus();
-  const pendingSubmissions = MasterData.getPendingSubmissions();
-  const allSubmissions = MasterData.getAllSubmissions();
+  const [allCampers, setAllCampers] = React.useState(MasterData.getAllCampersWithStatus());
+  const [pendingSubmissions, setPendingSubmissions] = React.useState(MasterData.getPendingSubmissions());
+  const [allSubmissions, setAllSubmissions] = React.useState<CamperSubmission[]>([]);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const submissions = await MasterData.getAllSubmissions();
+      setAllSubmissions(submissions);
+    };
+    loadData();
+  }, []);
 
   const renderContent = () => {
     switch (type) {

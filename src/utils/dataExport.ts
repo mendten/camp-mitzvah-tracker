@@ -54,8 +54,8 @@ export interface FullExportData {
   };
 }
 
-export function getCamperStats(camperId: string) {
-  const submission = MasterData.getCamperTodaySubmission(camperId);
+export async function getCamperStats(camperId: string) {
+  const submission = await MasterData.getCamperTodaySubmission(camperId);
   const workingMissions = MasterData.getCamperWorkingMissions(camperId);
   
   const activeMissions = DEFAULT_MISSIONS.filter(m => m.isActive);
@@ -101,11 +101,11 @@ export function getCamperStats(camperId: string) {
 
 export async function exportAllData(): Promise<FullExportData> {
   const allCamperProfiles = await MasterData.getAllCamperProfiles();
-  const allSubmissions = MasterData.getAllSubmissions();
+  const allSubmissions = await MasterData.getAllSubmissions();
   
-  const allCampers = allCamperProfiles.map(profile => {
-    const stats = getCamperStats(profile.id);
-    const submission = MasterData.getCamperTodaySubmission(profile.id);
+  const allCampers = await Promise.all(allCamperProfiles.map(async profile => {
+    const stats = await getCamperStats(profile.id);
+    const submission = await MasterData.getCamperTodaySubmission(profile.id);
     const workingMissions = MasterData.getCamperWorkingMissions(profile.id);
     
     return {
@@ -122,18 +122,18 @@ export async function exportAllData(): Promise<FullExportData> {
       mandatoryTotal: stats.mandatoryTotal,
       progressPercentage: stats.progressPercentage
     };
-  });
+  }));
 
-  const missionStats = DEFAULT_MISSIONS.map(mission => {
+  const missionStats = await Promise.all(DEFAULT_MISSIONS.map(async mission => {
     const totalCampers = allCamperProfiles.length;
     let completionCount = 0;
     
-    allCamperProfiles.forEach(profile => {
-      const submission = MasterData.getCamperTodaySubmission(profile.id);
+    for (const profile of allCamperProfiles) {
+      const submission = await MasterData.getCamperTodaySubmission(profile.id);
       if (submission && submission.status === 'approved' && submission.missions.includes(mission.id)) {
         completionCount++;
       }
-    });
+    }
 
     return {
       id: mission.id,
@@ -145,11 +145,11 @@ export async function exportAllData(): Promise<FullExportData> {
       totalCampers,
       completionRate: Math.round((completionCount / totalCampers) * 100)
     };
-  });
+  }));
 
-  const bunkStats = CAMP_DATA.map(bunk => {
+  const bunkStats = await Promise.all(CAMP_DATA.map(async bunk => {
     const bunkCampers = allCamperProfiles.filter(profile => profile.bunkId === bunk.id);
-    const camperStats = bunkCampers.map(profile => getCamperStats(profile.id));
+    const camperStats = await Promise.all(bunkCampers.map(profile => getCamperStats(profile.id)));
     const qualifiedCount = camperStats.filter(stats => stats.todayQualified).length;
     const avgProgress = camperStats.length > 0 ? Math.round(
       camperStats.reduce((sum, stats) => sum + stats.progressPercentage, 0) / camperStats.length
@@ -163,7 +163,7 @@ export async function exportAllData(): Promise<FullExportData> {
       averageProgress: avgProgress,
       staff: bunk.staff.map(s => s.name)
     };
-  });
+  }));
 
   return {
     exportDate: new Date().toISOString(),
@@ -231,7 +231,7 @@ export async function downloadFullReport() {
   window.URL.revokeObjectURL(url);
 }
 
-export function importData(jsonData: string): boolean {
+export async function importData(jsonData: string): Promise<boolean> {
   try {
     const data: FullExportData = JSON.parse(jsonData);
     
@@ -251,7 +251,7 @@ export function importData(jsonData: string): boolean {
     } else {
       // Legacy import - convert old format to new MasterData format
       console.warn('Importing legacy format - some data may be lost');
-      data.campers.forEach(camper => {
+      for (const camper of data.campers) {
         // This is a simplified conversion - you may want to enhance this
         const profile = {
           id: camper.id,
@@ -264,17 +264,17 @@ export function importData(jsonData: string): boolean {
         // We can't perfectly recreate the old localStorage format,
         // so we'll create basic submissions
         if (camper.approvedMissions.length > 0) {
-          MasterData.submitCamperMissions(camper.id, camper.approvedMissions);
-          const todaySubmission = MasterData.getCamperTodaySubmission(camper.id);
+          await MasterData.submitCamperMissions(camper.id, camper.approvedMissions);
+          const todaySubmission = await MasterData.getCamperTodaySubmission(camper.id);
           if (todaySubmission) {
-            MasterData.approveSubmission(todaySubmission.id, 'Import');
+            await MasterData.approveSubmission(todaySubmission.id, 'Import');
           }
         }
-      });
+      }
     }
     
     // Import settings
-    MasterData.setDailyRequired(data.settings.dailyRequired);
+    await MasterData.setDailyRequired(data.settings.dailyRequired);
     localStorage.setItem('current_session', data.session.toString());
     localStorage.setItem('current_week', data.week.toString());
     localStorage.setItem('current_day', data.day.toString());

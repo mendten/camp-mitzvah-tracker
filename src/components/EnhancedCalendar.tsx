@@ -23,6 +23,17 @@ const EnhancedCalendar: React.FC<EnhancedCalendarProps> = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showHebrewDates, setShowHebrewDates] = useState(false);
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+  const [todaySubmission, setTodaySubmission] = useState<any>(null);
+
+  React.useEffect(() => {
+    if (!isAdminView) {
+      const loadTodaySubmission = async () => {
+        const submission = await MasterData.getCamperTodaySubmission(camperId);
+        setTodaySubmission(submission);
+      };
+      loadTodaySubmission();
+    }
+  }, [camperId, isAdminView]);
 
   const today = new Date();
   const currentMonth = currentDate.getMonth();
@@ -54,7 +65,6 @@ const EnhancedCalendar: React.FC<EnhancedCalendarProps> = ({
       };
     } else {
       // For individual camper view
-      const todaySubmission = MasterData.getCamperTodaySubmission(camperId);
       const workingMissions = MasterData.getCamperWorkingMissions(camperId);
       const dailyRequired = MasterData.getDailyRequired();
       

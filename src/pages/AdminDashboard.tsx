@@ -31,7 +31,14 @@ const AdminDashboard = () => {
   const hebrewDate = getCurrentProperHebrewDate();
   const sessionInfo = getSessionInfo();
 
+  const [allSubmissions, setAllSubmissions] = useState<CamperSubmission[]>([]);
+
   useEffect(() => {
+    const loadData = async () => {
+      const submissions = await MasterData.getAllSubmissions();
+      setAllSubmissions(submissions);
+    };
+    
     const storedPassword = MasterData.getAdminPassword();
     setAdminPassword(storedPassword);
 
@@ -39,6 +46,8 @@ const AdminDashboard = () => {
     if (isAdminLoggedIn === 'true') {
       setIsAuthenticated(true);
     }
+    
+    loadData();
   }, []);
 
   const handleLogin = () => {
@@ -61,7 +70,7 @@ const AdminDashboard = () => {
   const allCampersWithStatus = MasterData.getAllCampersWithStatus();
   const pendingSubmissions = MasterData.getPendingSubmissions();
   const qualifiedToday = allCampersWithStatus.filter(c => c.isQualified).length;
-  const totalSubmissions = MasterData.getAllSubmissions().length;
+  const totalSubmissions = allSubmissions.length;
 
   // Card click handlers - now open modals instead of changing tabs
   const handleCardClick = (action: 'campers' | 'qualified' | 'pending' | 'submissions') => {

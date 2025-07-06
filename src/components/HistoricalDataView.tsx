@@ -26,7 +26,7 @@ const HistoricalDataView = () => {
   const loadDataForDate = async () => {
     setLoading(true);
     try {
-      const allSubmissions = MasterData.getAllSubmissions();
+      const allSubmissions = await MasterData.getAllSubmissions();
       const dateSubmissions = allSubmissions.filter(s => s.date === selectedDate);
       setSubmissions(dateSubmissions.sort((a, b) => a.camperName.localeCompare(b.camperName)));
 

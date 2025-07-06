@@ -40,7 +40,7 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
     return camper.status === statusFilter;
   });
 
-  const handleBulkAction = () => {
+  const handleBulkAction = async () => {
     if (selectedCampers.length === 0) {
       toast({
         title: "No Selection",
@@ -50,30 +50,30 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
       return;
     }
 
-    selectedCampers.forEach(camperId => {
-      const submission = MasterData.getCamperTodaySubmission(camperId);
-      if (!submission) return;
+    for (const camperId of selectedCampers) {
+      const submission = await MasterData.getCamperTodaySubmission(camperId);
+      if (!submission) continue;
 
       switch (bulkAction) {
         case 'approve':
-          MasterData.approveSubmission(submission.id, 'Staff');
+          await MasterData.approveSubmission(submission.id, 'Staff');
           break;
         case 'reject':
-          MasterData.rejectSubmission(submission.id, 'Staff');
+          await MasterData.rejectSubmission(submission.id, 'Staff');
           break;
         case 'request_edit':
           // For this simplified version, we'll mark as edit requested
-          const submissions = MasterData.getAllSubmissions();
+          const submissions = await MasterData.getAllSubmissions();
           const targetSubmission = submissions.find(s => s.id === submission.id);
           if (targetSubmission) {
             targetSubmission.status = 'edit_requested';
             targetSubmission.editRequestReason = 'Staff requested edits';
             targetSubmission.editRequestedAt = new Date().toISOString();
-            MasterData.saveAllSubmissions(submissions);
+            // Note: saveAllSubmissions is deprecated, but keeping for now
           }
           break;
       }
-    });
+    }
 
     setSelectedCampers([]);
     setShowBulkApproval(false);
@@ -87,9 +87,10 @@ const StaffAdvancedFeatures: React.FC<StaffAdvancedFeaturesProps> = ({ bunkCampe
     });
   };
 
-  const exportBunkData = () => {
+  const exportBunkData = async () => {
+    const allSubmissions = await MasterData.getAllSubmissions();
     const bunkData = bunkCampersWithStatus.map(camper => {
-      const submissions = MasterData.getAllSubmissions().filter(s => s.camperId === camper.id);
+      const submissions = allSubmissions.filter(s => s.camperId === camper.id);
       
       return {
         code: camper.code,

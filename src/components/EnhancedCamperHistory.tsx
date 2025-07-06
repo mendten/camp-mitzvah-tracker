@@ -18,8 +18,8 @@ const EnhancedCamperHistory: React.FC<EnhancedCamperHistoryProps> = ({ camperId 
     loadSubmissions();
   }, [camperId]);
 
-  const loadSubmissions = () => {
-    const allSubmissions = MasterData.getAllSubmissions();
+  const loadSubmissions = async () => {
+    const allSubmissions = await MasterData.getAllSubmissions();
     const camperSubmissions = allSubmissions
       .filter(s => s.camperId === camperId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

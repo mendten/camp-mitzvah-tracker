@@ -16,6 +16,13 @@ interface CamperCalendarProps {
 const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, missions, camperId }) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDateData, setSelectedDateData] = useState<{
+    completed: number;
+    total: number;
+    missions: string[];
+    status: 'working' | 'submitted' | 'approved' | 'rejected' | 'edit_requested' | 'not_submitted';
+    qualified: boolean;
+  } | null>(null);
 
   // Get real completion data for any date
   const getCompletionDataForDate = async (date: Date) => {
@@ -71,7 +78,13 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
     }
   };
 
-  const selectedDateData = selectedDate ? getCompletionDataForDate(selectedDate) : null;
+  React.useEffect(() => {
+    if (selectedDate) {
+      getCompletionDataForDate(selectedDate).then(setSelectedDateData);
+    } else {
+      setSelectedDateData(null);
+    }
+  }, [selectedDate, camperId]);
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
@@ -109,22 +122,8 @@ const CamperCalendar: React.FC<CamperCalendarProps> = ({ completedMissions, miss
             onMonthChange={setCurrentMonth}
             className="rounded-md border pointer-events-auto"
             modifiers={{
-              approved: (date) => {
-                const data = getCompletionDataForDate(date);
-                return data.status === 'approved';
-              },
-              submitted: (date) => {
-                const data = getCompletionDataForDate(date);
-                return data.status === 'submitted';
-              },
-              editRequested: (date) => {
-                const data = getCompletionDataForDate(date);
-                return data.status === 'edit_requested';
-              },
-              partial: (date) => {
-                const data = getCompletionDataForDate(date);
-                return data.completed > 0 && data.status === 'working';
-              }
+              // Note: Calendar modifiers can't be async, so they won't show real-time status
+              // This is a limitation we'll need to address later
             }}
             modifiersStyles={{
               approved: { backgroundColor: '#10b981', color: 'white' },
