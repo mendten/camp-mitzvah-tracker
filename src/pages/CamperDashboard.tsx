@@ -119,7 +119,7 @@ const CamperDashboard = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedCamper || selectedMissions.size === 0) return;
+    if (!selectedCamper) return;
     
     try {
       // Submit missions to Supabase (auto-approved)
@@ -179,7 +179,7 @@ const CamperDashboard = () => {
   
   // Separate qualification from submission ability
   const isQualified = completedCount >= dailyRequired;
-  const canSubmit = completedCount > 0 && submissionStatus === 'none'; // Can submit with any number of missions
+  const canSubmit = submissionStatus === 'none'; // Can submit with any number of missions (even 0)
 
   const getStatusDisplay = () => {
     if (submissionStatus === 'submitted') {
@@ -327,10 +327,8 @@ const CamperDashboard = () => {
           </Card>
         </div>
 
-        {/* Mission History - show if already submitted today */}
-        {submissionStatus !== 'none' && (
-          <CamperHistoryView camperId={selectedCamper.id} />
-        )}
+        {/* Mission History - always show */}
+        <CamperHistoryView camperId={selectedCamper.id} />
 
         {/* Missions Card - only show if not submitted */}
         {submissionStatus === 'none' && (
@@ -351,11 +349,11 @@ const CamperDashboard = () => {
                 </div>
               </CardTitle>
               <p className="text-gray-600">
-                Select your completed missions and submit when ready. You need at least {dailyRequired} missions to qualify for the day.
+                Select your completed missions and submit when ready. You can submit with any number of missions. You need at least {dailyRequired} missions to qualify for the day.
               </p>
-              {!isQualified && completedCount > 0 && (
+              {!isQualified && (
                 <p className="text-orange-600 text-sm font-medium">
-                  ⚠️ You need {dailyRequired - completedCount} more missions to qualify, but you can still submit with {completedCount} missions.
+                  ⚠️ You need {Math.max(0, dailyRequired - completedCount)} more missions to qualify, but you can still submit with {completedCount} missions.
                 </p>
               )}
             </CardHeader>

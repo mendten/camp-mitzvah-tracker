@@ -21,6 +21,7 @@ import AdminCardModal from '@/components/AdminCardModal';
 import AdminSupabaseSubmissions from '@/components/AdminSupabaseSubmissions';
 import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrewDate';
 import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
+import { supabaseService } from '@/services/supabaseService';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -43,10 +44,14 @@ const AdminDashboard = () => {
       try {
         setLoading(true);
         
+        // Load system settings first
+        const settings = await supabaseService.getSystemSettings();
+        setAdminPassword(settings.adminPassword);
+        
         // Load all data from Supabase
         const [submissions, camperProfiles] = await Promise.all([
-          MasterData.getAllSubmissions(),
-          MasterData.getAllCamperProfiles()
+          supabaseService.getAllSubmissions(),
+          supabaseService.getAllCamperProfiles()
         ]);
 
         setAllSubmissions(submissions);
@@ -54,12 +59,11 @@ const AdminDashboard = () => {
         // Build campers with status using async data
         const campersWithStatus = await Promise.all(
           camperProfiles.map(async (profile) => {
-            const todaySubmission = await MasterData.getCamperTodaySubmission(profile.id);
-            const workingMissions = MasterData.getCamperWorkingMissionsSync(profile.id);
-            const dailyRequired = MasterData.getDailyRequiredSync();
+            const todaySubmission = await supabaseService.getCamperTodaySubmission(profile.id);
+            const dailyRequired = settings.dailyRequired;
             
             let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
-            let missionCount = workingMissions.length;
+            let missionCount = 0;
             
             if (todaySubmission) {
               // With auto-approval, all submissions are approved
@@ -74,7 +78,6 @@ const AdminDashboard = () => {
               bunkName: profile.bunkName,
               bunkId: profile.bunkId,
               todaySubmission,
-              workingMissions,
               status,
               missionCount,
               isQualified: missionCount >= dailyRequired
@@ -94,9 +97,6 @@ const AdminDashboard = () => {
         setLoading(false);
       }
     };
-    
-    const storedPassword = MasterData.getAdminPassword();
-    setAdminPassword(storedPassword);
 
     const isAdminLoggedIn = localStorage.getItem('adminAuthenticated');
     if (isAdminLoggedIn === 'true') {
