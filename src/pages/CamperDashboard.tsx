@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, Trophy, Clock, Send, History } from 'lucide-react';
+import CamperHistoryView from '@/components/CamperHistoryView';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_MISSIONS } from '@/data/campData';
 import MissionCard from '@/components/MissionCard';
@@ -56,9 +57,10 @@ const CamperDashboard = () => {
         console.log(`Camper ${profile.name} logged in - Counselor: ${bunkStaff.name}`);
       }
 
-      // Check if already submitted today
+      // Check if already submitted TODAY specifically
       const todaySubmission = await MasterData.getCamperTodaySubmission(camperId);
       if (todaySubmission) {
+        // Already submitted today - show completed state
         setSubmissionStatus(todaySubmission.status === 'approved' ? 'approved' : 'submitted');
         setCompletedMissions(new Set(todaySubmission.missions));
         
@@ -67,7 +69,8 @@ const CamperDashboard = () => {
           description: todaySubmission.status === 'approved' ? 'Your submission has been approved!' : 'Your submission is under review.',
         });
       } else {
-        // Load working missions
+        // No submission today - can work on missions
+        setSubmissionStatus('none');
         const workingMissions = await supabaseService.getCamperWorkingMissions(camperId);
         setCompletedMissions(new Set(workingMissions));
       }
@@ -295,6 +298,24 @@ const CamperDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Mission History - show if already submitted today */}
+        {submissionStatus !== 'none' && (
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center justify-between">
+                <span>Your Mission History</span>
+                <History className="h-5 w-5 text-purple-600" />
+              </CardTitle>
+              <p className="text-gray-600">
+                View all your past submissions
+              </p>
+            </CardHeader>
+            <CardContent>
+              <CamperHistoryView camperId={selectedCamper.id} />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Missions Card - only show if not submitted */}
         {submissionStatus === 'none' && (

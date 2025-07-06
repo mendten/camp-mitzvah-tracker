@@ -67,6 +67,7 @@ const CamperHistoryView: React.FC<CamperHistoryViewProps> = ({ camperId }) => {
           <Calendar className="h-5 w-5 text-blue-600" />
           <span>Mission History</span>
         </CardTitle>
+        <p className="text-gray-600">All your past submissions from Supabase</p>
       </CardHeader>
       <CardContent>
         {submissions.length === 0 ? (
@@ -127,7 +128,7 @@ const CamperHistoryView: React.FC<CamperHistoryViewProps> = ({ camperId }) => {
                       Missions Completed: {submission.missions.length}
                     </span>
                     <span className="text-xs text-gray-500">
-                      Required: {MasterData.getDailyRequired()}
+                      Required: {3} {/* Default daily required */}
                     </span>
                   </div>
                   

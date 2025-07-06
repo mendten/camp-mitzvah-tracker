@@ -18,6 +18,7 @@ import MissionManagement from '@/components/MissionManagement';
 import AdminSettings from '@/components/AdminSettings';
 import PublicDashboard from '@/components/PublicDashboard';
 import AdminCardModal from '@/components/AdminCardModal';
+import AdminSupabaseSubmissions from '@/components/AdminSupabaseSubmissions';
 import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrewDate';
 import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
 
@@ -31,12 +32,66 @@ const AdminDashboard = () => {
   const hebrewDate = getCurrentProperHebrewDate();
   const sessionInfo = getSessionInfo();
 
+  // Async state management for dashboard data
   const [allSubmissions, setAllSubmissions] = useState<CamperSubmission[]>([]);
+  const [allCampersWithStatus, setAllCampersWithStatus] = useState<any[]>([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState<CamperSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      const submissions = await MasterData.getAllSubmissions();
-      setAllSubmissions(submissions);
+      try {
+        setLoading(true);
+        
+        // Load all data from Supabase
+        const [submissions, camperProfiles] = await Promise.all([
+          MasterData.getAllSubmissions(),
+          MasterData.getAllCamperProfiles()
+        ]);
+
+        setAllSubmissions(submissions);
+        
+        // Build campers with status using async data
+        const campersWithStatus = await Promise.all(
+          camperProfiles.map(async (profile) => {
+            const todaySubmission = await MasterData.getCamperTodaySubmission(profile.id);
+            const workingMissions = MasterData.getCamperWorkingMissionsSync(profile.id);
+            const dailyRequired = MasterData.getDailyRequiredSync();
+            
+            let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
+            let missionCount = workingMissions.length;
+            
+            if (todaySubmission) {
+              status = todaySubmission.status === 'edit_requested' ? 'submitted' : todaySubmission.status;
+              missionCount = todaySubmission.missions.length;
+            }
+            
+            return {
+              id: profile.id,
+              name: profile.name,
+              code: profile.code,
+              bunkName: profile.bunkName,
+              bunkId: profile.bunkId,
+              todaySubmission,
+              workingMissions,
+              status,
+              missionCount,
+              isQualified: missionCount >= dailyRequired
+            };
+          })
+        );
+
+        setAllCampersWithStatus(campersWithStatus);
+        
+        // Filter pending submissions
+        const pending = submissions.filter(s => s.status === 'submitted' || s.status === 'edit_requested');
+        setPendingSubmissions(pending);
+        
+      } catch (error) {
+        console.error('Error loading admin dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     
     const storedPassword = MasterData.getAdminPassword();
@@ -45,14 +100,15 @@ const AdminDashboard = () => {
     const isAdminLoggedIn = localStorage.getItem('adminAuthenticated');
     if (isAdminLoggedIn === 'true') {
       setIsAuthenticated(true);
+      loadData();
     }
-    
-    loadData();
   }, []);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
     localStorage.setItem('adminAuthenticated', 'true');
+    // Reload data after login
+    window.location.reload();
   };
 
   const handleLogout = () => {
@@ -67,8 +123,6 @@ const AdminDashboard = () => {
   };
 
   // Get quick stats for the overview cards
-  const allCampersWithStatus = MasterData.getAllCampersWithStatus();
-  const pendingSubmissions = MasterData.getPendingSubmissions();
   const qualifiedToday = allCampersWithStatus.filter(c => c.isQualified).length;
   const totalSubmissions = allSubmissions.length;
 
@@ -121,18 +175,33 @@ const AdminDashboard = () => {
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Quick Stats Overview - Clickable Cards with Modals */}
-        <div className="grid md:grid-cols-4 gap-4">
-          <Card 
-            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
-            onClick={() => handleCardClick('campers')}
-          >
-            <CardContent className="p-6 text-center">
-              <Users className="h-12 w-12 mx-auto text-blue-600 mb-2" />
-              <div className="text-3xl font-bold text-gray-900">{allCampersWithStatus.length}</div>
-              <p className="text-gray-600">Total Campers</p>
-              <p className="text-xs text-blue-600 mt-1">Click to view details</p>
-            </CardContent>
-          </Card>
+        {loading ? (
+          <div className="grid md:grid-cols-4 gap-4">
+            {[1,2,3,4].map(i => (
+              <Card key={i} className="bg-white/80 backdrop-blur shadow-lg border-0">
+                <CardContent className="p-6 text-center">
+                  <div className="animate-pulse">
+                    <div className="h-12 w-12 bg-gray-300 rounded mx-auto mb-2"></div>
+                    <div className="h-8 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-4 gap-4">
+            <Card 
+              className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
+              onClick={() => handleCardClick('campers')}
+            >
+              <CardContent className="p-6 text-center">
+                <Users className="h-12 w-12 mx-auto text-blue-600 mb-2" />
+                <div className="text-3xl font-bold text-gray-900">{allCampersWithStatus.length}</div>
+                <p className="text-gray-600">Total Campers</p>
+                <p className="text-xs text-blue-600 mt-1">Click to view details</p>
+              </CardContent>
+            </Card>
           
           <Card 
             className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
@@ -169,13 +238,14 @@ const AdminDashboard = () => {
               <p className="text-xs text-orange-600 mt-1">Click to view history</p>
             </CardContent>
           </Card>
-        </div>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
-            <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="submissions">Supabase Submissions</TabsTrigger>
             <TabsTrigger value="historical">Historical</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="campers">Edit Campers</TabsTrigger>
@@ -193,7 +263,7 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="submissions">
-            <AdminSubmissionsManagement />
+            <AdminSupabaseSubmissions />
           </TabsContent>
 
           <TabsContent value="historical">
