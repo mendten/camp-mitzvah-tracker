@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Lock, Calendar, Users, Save } from 'lucide-react';
-import { MasterData } from '@/utils/masterDataStorage';
+import { Settings, Lock, Calendar, Users, Save, Clock } from 'lucide-react';
+import { supabaseService } from '@/services/supabaseService';
 
 const AdminSettings = () => {
   const { toast } = useToast();
@@ -16,24 +17,46 @@ const AdminSettings = () => {
   const [dailyRequired, setDailyRequired] = useState(3);
   const [campName, setCampName] = useState('Camp Gan Yisroel Florida');
   const [maxSubmissionsPerDay, setMaxSubmissionsPerDay] = useState(1);
+  const [timezone, setTimezone] = useState('America/New_York');
+  const [systemSettings, setSystemSettings] = useState<any>(null);
 
   useEffect(() => {
     loadSettings();
   }, []);
 
-  const loadSettings = () => {
-    setDailyRequired(MasterData.getDailyRequired());
-    const storedCampName = localStorage.getItem('camp_name');
-    if (storedCampName) setCampName(storedCampName);
-    
-    const maxSubmissions = localStorage.getItem('max_submissions_per_day');
-    if (maxSubmissions) setMaxSubmissionsPerDay(parseInt(maxSubmissions));
+  const loadSettings = async () => {
+    try {
+      const settings = await supabaseService.getSystemSettings();
+      setSystemSettings(settings);
+      setDailyRequired(settings.dailyRequired);
+      setTimezone(settings.timezone);
+      
+      const storedCampName = localStorage.getItem('camp_name');
+      if (storedCampName) setCampName(storedCampName);
+      
+      const maxSubmissions = localStorage.getItem('max_submissions_per_day');
+      if (maxSubmissions) setMaxSubmissionsPerDay(parseInt(maxSubmissions));
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast({
+        title: "Error Loading Settings",
+        description: "Could not load system settings. Using defaults.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handlePasswordChange = () => {
-    const adminPassword = MasterData.getAdminPassword();
+  const handlePasswordChange = async () => {
+    if (!systemSettings) {
+      toast({
+        title: "Error",
+        description: "System settings not loaded.",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    if (currentPassword !== adminPassword) {
+    if (currentPassword !== systemSettings.adminPassword) {
       toast({
         title: "Invalid Password",
         description: "Current password is incorrect.",
@@ -60,18 +83,27 @@ const AdminSettings = () => {
       return;
     }
 
-    MasterData.setAdminPassword(newPassword);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    
-    toast({
-      title: "Password Updated",
-      description: "Admin password has been changed successfully.",
-    });
+    try {
+      await supabaseService.updateSystemSettings({ adminPassword: newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setSystemSettings({ ...systemSettings, adminPassword: newPassword });
+      
+      toast({
+        title: "Password Updated",
+        description: "Admin password has been changed successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update password. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     if (dailyRequired < 1 || dailyRequired > 20) {
       toast({
         title: "Invalid Daily Required",
@@ -90,14 +122,25 @@ const AdminSettings = () => {
       return;
     }
 
-    MasterData.setDailyRequired(dailyRequired);
-    localStorage.setItem('camp_name', campName);
-    localStorage.setItem('max_submissions_per_day', maxSubmissionsPerDay.toString());
-    
-    toast({
-      title: "Settings Saved",
-      description: "All settings have been updated successfully.",
-    });
+    try {
+      await supabaseService.updateSystemSettings({ 
+        dailyRequired,
+        timezone 
+      });
+      localStorage.setItem('camp_name', campName);
+      localStorage.setItem('max_submissions_per_day', maxSubmissionsPerDay.toString());
+      
+      toast({
+        title: "Settings Saved",
+        description: "All settings have been updated successfully. Daily reset will now occur at midnight in the selected timezone.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleResetAllData = () => {
@@ -120,13 +163,18 @@ const AdminSettings = () => {
     }
   };
 
-  const exportAllData = () => {
+  const exportAllData = async () => {
     try {
+      // Get data from Supabase
+      const [camperProfiles, submissions] = await Promise.all([
+        supabaseService.getAllCamperProfiles(),
+        supabaseService.getAllSubmissions()
+      ]);
+      
       const allData = {
-        camperProfiles: MasterData.getAllCamperProfiles(),
-        submissions: MasterData.getAllSubmissions(),
-        adminPassword: MasterData.getAdminPassword(),
-        dailyRequired: MasterData.getDailyRequired(),
+        camperProfiles,
+        submissions,
+        systemSettings,
         campName,
         maxSubmissionsPerDay,
         exportDate: new Date().toISOString()
@@ -209,9 +257,12 @@ const AdminSettings = () => {
       <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Settings className="h-6 w-6 text-blue-600" />
-            <span>Camp Configuration</span>
+            <Clock className="h-6 w-6 text-blue-600" />
+            <span>Camp Configuration & Timezone</span>
           </CardTitle>
+          <p className="text-sm text-gray-600">
+            Current timezone: <strong>{timezone}</strong> - Submissions reset daily at midnight in this timezone
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -249,6 +300,26 @@ const AdminSettings = () => {
             />
             <p className="text-sm text-gray-500 mt-1">
               Maximum number of submission attempts per camper per day
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="timezone">Camp Timezone</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="America/New_York">Eastern Time (New York)</SelectItem>
+                <SelectItem value="America/Chicago">Central Time (Chicago)</SelectItem>
+                <SelectItem value="America/Denver">Mountain Time (Denver)</SelectItem>
+                <SelectItem value="America/Los_Angeles">Pacific Time (Los Angeles)</SelectItem>
+                <SelectItem value="Asia/Jerusalem">Israel Time (Jerusalem)</SelectItem>
+                <SelectItem value="Europe/London">GMT (London)</SelectItem>
+                <SelectItem value="UTC">UTC</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-500 mt-1">
+              Daily submission reset occurs at midnight in this timezone
             </p>
           </div>
           <Button onClick={handleSaveSettings} className="bg-blue-600 hover:bg-blue-700">

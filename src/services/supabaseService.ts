@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { formatInTimeZone } from 'date-fns-tz';
 
 export interface CamperSubmission {
   id: string;
@@ -52,6 +53,7 @@ export interface Bunk {
 
 class SupabaseService {
   private static instance: SupabaseService;
+  private cachedTimezone: string | null = null;
   
   static getInstance(): SupabaseService {
     if (!SupabaseService.instance) {
@@ -60,9 +62,43 @@ class SupabaseService {
     return SupabaseService.instance;
   }
 
-  // Generate today's date string
-  getTodayString(): string {
-    return new Date().toISOString().split('T')[0];
+  // Get timezone-aware today's date string
+  async getTodayString(): Promise<string> {
+    const timezone = await this.getTimezone();
+    return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+  }
+
+  // Get system timezone setting
+  private async getTimezone(): Promise<string> {
+    if (this.cachedTimezone) {
+      return this.cachedTimezone;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('timezone')
+        .eq('id', 1)
+        .single();
+
+      if (error) {
+        console.error('Error fetching timezone:', error);
+        this.cachedTimezone = 'America/New_York'; // Default fallback
+        return this.cachedTimezone;
+      }
+
+      this.cachedTimezone = data.timezone || 'America/New_York';
+      return this.cachedTimezone;
+    } catch (error) {
+      console.error('Error in getTimezone:', error);
+      this.cachedTimezone = 'America/New_York'; // Default fallback
+      return this.cachedTimezone;
+    }
+  }
+
+  // Clear timezone cache when settings change
+  clearTimezoneCache(): void {
+    this.cachedTimezone = null;
   }
 
   // Get all bunks
@@ -295,7 +331,7 @@ class SupabaseService {
       throw new Error('Camper profile not found');
     }
 
-    const today = this.getTodayString();
+    const today = await this.getTodayString();
     const submissionId = `sub_${camperId}_${today}_${Date.now()}`;
     
     // Insert the submission with auto-approval
@@ -337,7 +373,7 @@ class SupabaseService {
 
   // Get today's submission for a camper
   async getCamperTodaySubmission(camperId: string): Promise<CamperSubmission | null> {
-    const today = this.getTodayString();
+    const today = await this.getTodayString();
     
     const { data, error } = await supabase
       .from('submissions')
@@ -482,21 +518,23 @@ class SupabaseService {
   async getSystemSettings(): Promise<{
     dailyRequired: number;
     adminPassword: string;
+    timezone: string;
   }> {
     const { data, error } = await supabase
       .from('system_settings')
-      .select('daily_required_missions, admin_password')
+      .select('daily_required_missions, admin_password, timezone')
       .eq('id', 1)
       .single();
     
     if (error) {
       console.error('Error fetching system settings:', error);
-      return { dailyRequired: 3, adminPassword: 'admin123' };
+      return { dailyRequired: 3, adminPassword: 'admin123', timezone: 'America/New_York' };
     }
     
     return {
       dailyRequired: data.daily_required_missions,
-      adminPassword: data.admin_password
+      adminPassword: data.admin_password,
+      timezone: data.timezone || 'America/New_York'
     };
   }
 
@@ -583,6 +621,7 @@ class SupabaseService {
   async updateSystemSettings(settings: {
     dailyRequired?: number;
     adminPassword?: string;
+    timezone?: string;
   }): Promise<void> {
     const updateData: any = {};
     
@@ -592,6 +631,11 @@ class SupabaseService {
     
     if (settings.adminPassword !== undefined) {
       updateData.admin_password = settings.adminPassword;
+    }
+    
+    if (settings.timezone !== undefined) {
+      updateData.timezone = settings.timezone;
+      this.clearTimezoneCache(); // Clear cache when timezone changes
     }
     
     const { error } = await supabase
