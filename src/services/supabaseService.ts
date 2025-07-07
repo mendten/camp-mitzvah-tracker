@@ -334,13 +334,15 @@ class SupabaseService {
     const today = await this.getTodayString();
     const submissionId = `sub_${camperId}_${today}_${Date.now()}`;
     
+    console.log(`[Submission] Camper ${camperId} submitting for date: ${today}`);
+    
     // Insert the submission with auto-approval
     const { error } = await supabase
       .from('submissions')
       .upsert({
         id: submissionId,
         camper_id: camperId,
-        date: today,
+        date: today, // This is now timezone-aware from getTodayString()
         missions: missionIds,
         status: 'approved', // Auto-approve all submissions
         submitted_at: new Date().toISOString(),
@@ -354,6 +356,8 @@ class SupabaseService {
       console.error('Error submitting missions:', error);
       throw error;
     }
+    
+    console.log(`[Submission] Successfully submitted for ${camperId} on ${today}`);
     
     // Clear working missions after submission
     await this.clearCamperWorkingMissions(camperId);
@@ -374,6 +378,8 @@ class SupabaseService {
   // Get today's submission for a camper
   async getCamperTodaySubmission(camperId: string): Promise<CamperSubmission | null> {
     const today = await this.getTodayString();
+    
+    console.log(`[Check Submission] Checking for camper ${camperId} on date: ${today}`);
     
     const { data, error } = await supabase
       .from('submissions')
@@ -399,11 +405,14 @@ class SupabaseService {
     if (error) {
       if (error.code === 'PGRST116') {
         // No data found
+        console.log(`[Check Submission] No submission found for camper ${camperId} on ${today}`);
         return null;
       }
       console.error('Error fetching today submission:', error);
       return null;
     }
+    
+    console.log(`[Check Submission] Found existing submission for camper ${camperId} on ${today}:`, data.date);
     
     const camper = (data as any).campers;
     
