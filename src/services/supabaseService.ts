@@ -54,6 +54,7 @@ export interface Bunk {
 class SupabaseService {
   private static instance: SupabaseService;
   private cachedTimezone: string | null = null;
+  private cachedResetHour: number | null = null;
   
   static getInstance(): SupabaseService {
     if (!SupabaseService.instance) {
@@ -62,10 +63,30 @@ class SupabaseService {
     return SupabaseService.instance;
   }
 
-  // Get timezone-aware today's date string
+  // Get timezone-aware today's date string with reset hour logic
   async getTodayString(): Promise<string> {
     const timezone = await this.getTimezone();
-    return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+    const resetHour = await this.getDailyResetHour();
+    
+    // Get current time in the camp's timezone
+    const now = new Date();
+    const currentTimeInTimezone = formatInTimeZone(now, timezone, 'yyyy-MM-dd HH:mm:ss');
+    const currentHour = parseInt(formatInTimeZone(now, timezone, 'HH'));
+    
+    console.log(`[Date Logic] Current time in ${timezone}: ${currentTimeInTimezone}, Reset hour: ${resetHour}, Current hour: ${currentHour}`);
+    
+    // If current time is before the reset hour, use yesterday's date
+    // This makes submissions before 5 AM count for the previous day
+    let targetDate = now;
+    if (currentHour < resetHour) {
+      targetDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Subtract one day
+      console.log(`[Date Logic] Before reset hour (${resetHour}), using previous day`);
+    }
+    
+    const dateString = formatInTimeZone(targetDate, timezone, 'yyyy-MM-dd');
+    console.log(`[Date Logic] Final date string: ${dateString}`);
+    
+    return dateString;
   }
 
   // Get system timezone setting
@@ -96,9 +117,66 @@ class SupabaseService {
     }
   }
 
-  // Clear timezone cache when settings change
+  // Get daily reset hour setting
+  private async getDailyResetHour(): Promise<number> {
+    if (this.cachedResetHour !== null) {
+      return this.cachedResetHour;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('daily_reset_hour')
+        .eq('id', 1)
+        .single();
+
+      if (error) {
+        console.error('Error fetching daily reset hour:', error);
+        this.cachedResetHour = 5; // Default fallback
+        return this.cachedResetHour;
+      }
+
+      this.cachedResetHour = data.daily_reset_hour || 5;
+      return this.cachedResetHour;
+    } catch (error) {
+      console.error('Error in getDailyResetHour:', error);
+      this.cachedResetHour = 5; // Default fallback
+      return this.cachedResetHour;
+    }
+  }
+
+  // Clear cached settings when they change
   clearTimezoneCache(): void {
     this.cachedTimezone = null;
+    this.cachedResetHour = null;
+  }
+
+  // Get time until next reset
+  async getTimeUntilNextReset(): Promise<{ hours: number; minutes: number; nextResetTime: string }> {
+    const timezone = await this.getTimezone();
+    const resetHour = await this.getDailyResetHour();
+    
+    const now = new Date();
+    const currentTimeInTimezone = new Date(formatInTimeZone(now, timezone, 'yyyy-MM-dd HH:mm:ss'));
+    
+    // Calculate next reset time
+    let nextReset = new Date(currentTimeInTimezone);
+    nextReset.setHours(resetHour, 0, 0, 0);
+    
+    // If we've passed today's reset time, next reset is tomorrow
+    if (currentTimeInTimezone >= nextReset) {
+      nextReset.setDate(nextReset.getDate() + 1);
+    }
+    
+    const timeDiff = nextReset.getTime() - currentTimeInTimezone.getTime();
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return {
+      hours,
+      minutes,
+      nextResetTime: formatInTimeZone(nextReset, timezone, 'h:mm a')
+    };
   }
 
   // Get all bunks
@@ -523,27 +601,34 @@ class SupabaseService {
     }
   }
 
-  // Get system settings
+  // Get system settings (updated to include reset hour)
   async getSystemSettings(): Promise<{
     dailyRequired: number;
     adminPassword: string;
     timezone: string;
+    dailyResetHour: number;
   }> {
     const { data, error } = await supabase
       .from('system_settings')
-      .select('daily_required_missions, admin_password, timezone')
+      .select('daily_required_missions, admin_password, timezone, daily_reset_hour')
       .eq('id', 1)
       .single();
     
     if (error) {
       console.error('Error fetching system settings:', error);
-      return { dailyRequired: 3, adminPassword: 'admin123', timezone: 'America/New_York' };
+      return { 
+        dailyRequired: 3, 
+        adminPassword: 'admin123', 
+        timezone: 'America/New_York',
+        dailyResetHour: 5 
+      };
     }
     
     return {
       dailyRequired: data.daily_required_missions,
       adminPassword: data.admin_password,
-      timezone: data.timezone || 'America/New_York'
+      timezone: data.timezone || 'America/New_York',
+      dailyResetHour: data.daily_reset_hour || 5
     };
   }
 
@@ -626,11 +711,12 @@ class SupabaseService {
     }
   }
 
-  // Update system settings
+  // Update system settings (updated to include reset hour)
   async updateSystemSettings(settings: {
     dailyRequired?: number;
     adminPassword?: string;
     timezone?: string;
+    dailyResetHour?: number;
   }): Promise<void> {
     const updateData: any = {};
     
@@ -645,6 +731,11 @@ class SupabaseService {
     if (settings.timezone !== undefined) {
       updateData.timezone = settings.timezone;
       this.clearTimezoneCache(); // Clear cache when timezone changes
+    }
+    
+    if (settings.dailyResetHour !== undefined) {
+      updateData.daily_reset_hour = settings.dailyResetHour;
+      this.clearTimezoneCache(); // Clear cache when reset hour changes
     }
     
     const { error } = await supabase

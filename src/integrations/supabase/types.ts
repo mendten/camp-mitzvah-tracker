@@ -267,6 +267,7 @@ export type Database = {
         Row: {
           admin_password: string
           daily_required_missions: number
+          daily_reset_hour: number
           id: number
           timezone: string
           updated_at: string | null
@@ -274,6 +275,7 @@ export type Database = {
         Insert: {
           admin_password?: string
           daily_required_missions?: number
+          daily_reset_hour?: number
           id?: number
           timezone?: string
           updated_at?: string | null
@@ -281,6 +283,7 @@ export type Database = {
         Update: {
           admin_password?: string
           daily_required_missions?: number
+          daily_reset_hour?: number
           id?: number
           timezone?: string
           updated_at?: string | null

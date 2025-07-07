@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,10 +17,17 @@ const AdminSettings = () => {
   const [campName, setCampName] = useState('Camp Gan Yisroel Florida');
   const [maxSubmissionsPerDay, setMaxSubmissionsPerDay] = useState(1);
   const [timezone, setTimezone] = useState('America/New_York');
+  const [dailyResetHour, setDailyResetHour] = useState(5);
   const [systemSettings, setSystemSettings] = useState<any>(null);
+  const [timeUntilReset, setTimeUntilReset] = useState<{hours: number; minutes: number; nextResetTime: string} | null>(null);
 
   useEffect(() => {
     loadSettings();
+    updateTimeUntilReset();
+    
+    // Update time until reset every minute
+    const interval = setInterval(updateTimeUntilReset, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadSettings = async () => {
@@ -30,6 +36,7 @@ const AdminSettings = () => {
       setSystemSettings(settings);
       setDailyRequired(settings.dailyRequired);
       setTimezone(settings.timezone);
+      setDailyResetHour(settings.dailyResetHour);
       
       const storedCampName = localStorage.getItem('camp_name');
       if (storedCampName) setCampName(storedCampName);
@@ -43,6 +50,15 @@ const AdminSettings = () => {
         description: "Could not load system settings. Using defaults.",
         variant: "destructive"
       });
+    }
+  };
+
+  const updateTimeUntilReset = async () => {
+    try {
+      const timeInfo = await supabaseService.getTimeUntilNextReset();
+      setTimeUntilReset(timeInfo);
+    } catch (error) {
+      console.error('Error getting time until reset:', error);
     }
   };
 
@@ -122,17 +138,30 @@ const AdminSettings = () => {
       return;
     }
 
+    if (dailyResetHour < 0 || dailyResetHour > 23) {
+      toast({
+        title: "Invalid Reset Hour",
+        description: "Daily reset hour must be between 0 and 23.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await supabaseService.updateSystemSettings({ 
         dailyRequired,
-        timezone 
+        timezone,
+        dailyResetHour 
       });
       localStorage.setItem('camp_name', campName);
       localStorage.setItem('max_submissions_per_day', maxSubmissionsPerDay.toString());
       
+      // Update time until reset after saving
+      await updateTimeUntilReset();
+      
       toast({
         title: "Settings Saved",
-        description: "All settings have been updated successfully. Daily reset will now occur at midnight in the selected timezone.",
+        description: `All settings have been updated successfully. Daily reset now occurs at ${dailyResetHour}:00 in the selected timezone.`,
       });
     } catch (error) {
       toast({
@@ -258,11 +287,17 @@ const AdminSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Clock className="h-6 w-6 text-blue-600" />
-            <span>Camp Configuration & Timezone</span>
+            <span>Camp Configuration & Daily Reset</span>
           </CardTitle>
-          <p className="text-sm text-gray-600">
-            Current timezone: <strong>{timezone}</strong> - Submissions reset daily at midnight in this timezone
-          </p>
+          <div className="text-sm text-gray-600 space-y-1">
+            <p>Current timezone: <strong>{timezone}</strong></p>
+            <p>Daily reset time: <strong>{dailyResetHour}:00 {timezone}</strong></p>
+            {timeUntilReset && (
+              <p className="text-green-600 font-medium">
+                Next reset in: <strong>{timeUntilReset.hours}h {timeUntilReset.minutes}m</strong> (at {timeUntilReset.nextResetTime})
+              </p>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -318,8 +353,23 @@ const AdminSettings = () => {
                 <SelectItem value="UTC">UTC</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label htmlFor="daily-reset-hour">Daily Reset Hour (24-hour format)</Label>
+            <Select value={dailyResetHour.toString()} onValueChange={(value) => setDailyResetHour(parseInt(value))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select reset hour" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 24 }, (_, i) => (
+                  <SelectItem key={i} value={i.toString()}>
+                    {i.toString().padStart(2, '0')}:00 ({i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i-12}:00 PM`})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-sm text-gray-500 mt-1">
-              Daily submission reset occurs at midnight in this timezone
+              Hour when daily submissions reset. Submissions before this time count for the previous day.
             </p>
           </div>
           <Button onClick={handleSaveSettings} className="bg-blue-600 hover:bg-blue-700">
