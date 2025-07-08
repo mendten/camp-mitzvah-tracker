@@ -4,9 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, Calendar, TrendingUp, Crown, Medal, Award } from 'lucide-react';
-import { CAMP_DATA, DEFAULT_MISSIONS } from '@/data/campData';
 import { getCurrentHebrewDate } from '@/utils/hebrewDate';
-import { MasterData } from '@/utils/masterDataStorage';
+import { supabaseService } from '@/services/supabaseService';
 
 interface BunkStats {
   id: string;
@@ -32,75 +31,106 @@ const PublicDashboard = () => {
   const [showHebrewDate, setShowHebrewDate] = useState(false);
   const hebrewDate = getCurrentHebrewDate();
 
-  const calculateBunkStats = (): BunkStats[] => {
-    const allCampersWithStatus = MasterData.getAllCampersWithStatus();
-    const dailyRequired = MasterData.getDailyRequired();
-    
-    const stats = CAMP_DATA.map(bunk => {
-      const bunkCampers = allCampersWithStatus.filter(c => c.bunkId === bunk.id);
-      let totalCompletions = 0;
-      let qualifiedCampers = 0;
-      let totalProgress = 0;
+  const calculateBunkStats = async (): Promise<BunkStats[]> => {
+    try {
+      const [bunks, camperProfiles, settings, allSubmissions] = await Promise.all([
+        supabaseService.getBunks(),
+        supabaseService.getAllCamperProfiles(),
+        supabaseService.getSystemSettings(),
+        supabaseService.getAllSubmissions()
+      ]);
+      
+      const stats = await Promise.all(bunks.map(async (bunk) => {
+        const bunkCampers = camperProfiles.filter(c => c.bunkId === bunk.id);
+        let totalCompletions = 0;
+        let qualifiedCampers = 0;
+        let totalProgress = 0;
 
-      bunkCampers.forEach(camper => {
-        totalCompletions += camper.missionCount;
-        totalProgress += (camper.missionCount / DEFAULT_MISSIONS.filter(m => m.isActive).length) * 100;
-        
-        if (camper.isQualified) {
-          qualifiedCampers++;
-        }
+        await Promise.all(bunkCampers.map(async (camper) => {
+          const todaySubmission = await supabaseService.getCamperTodaySubmission(camper.id);
+          const missionCount = todaySubmission ? todaySubmission.missions.length : 0;
+          
+          totalCompletions += missionCount;
+          totalProgress += (missionCount / 6) * 100; // Assuming 6 total missions
+          
+          if (missionCount >= settings.dailyRequired) {
+            qualifiedCampers++;
+          }
+        }));
+
+        return {
+          id: bunk.id,
+          name: bunk.displayName,
+          totalCampers: bunkCampers.length,
+          qualifiedCampers,
+          totalCompletions,
+          averageProgress: bunkCampers.length > 0 ? Math.round(totalProgress / bunkCampers.length) : 0,
+          rank: 0
+        };
+      }));
+
+      stats.sort((a, b) => b.averageProgress - a.averageProgress);
+      stats.forEach((stat, index) => {
+        stat.rank = index + 1;
       });
 
-      return {
-        id: bunk.id,
-        name: bunk.displayName,
-        totalCampers: bunkCampers.length,
-        qualifiedCampers,
-        totalCompletions,
-        averageProgress: bunkCampers.length > 0 ? Math.round(totalProgress / bunkCampers.length) : 0,
-        rank: 0
-      };
-    });
-
-    stats.sort((a, b) => b.averageProgress - a.averageProgress);
-    stats.forEach((stat, index) => {
-      stat.rank = index + 1;
-    });
-
-    return stats;
+      return stats;
+    } catch (error) {
+      console.error('Error calculating bunk stats:', error);
+      return [];
+    }
   };
 
-  const calculateTopCampers = (): CamperStats[] => {
-    const allCampersWithStatus = MasterData.getAllCampersWithStatus();
-    
-    const topCampers = allCampersWithStatus
-      .map(camper => ({
-        id: camper.id,
-        name: camper.name,
-        bunk: camper.bunkName,
-        totalMissions: camper.missionCount,
-        qualifiedDays: camper.status === 'approved' ? 1 : 0 // Simplified for now
-      }))
-      .sort((a, b) => {
-        if (b.totalMissions !== a.totalMissions) {
-          return b.totalMissions - a.totalMissions;
-        }
-        return b.qualifiedDays - a.qualifiedDays;
-      })
-      .slice(0, 10);
-
-    return topCampers;
+  const calculateTopCampers = async (): Promise<CamperStats[]> => {
+    try {
+      const [camperProfiles, allSubmissions, settings] = await Promise.all([
+        supabaseService.getAllCamperProfiles(),
+        supabaseService.getAllSubmissions(),
+        supabaseService.getSystemSettings()
+      ]);
+      
+      const topCampers = await Promise.all(camperProfiles.map(async (camper) => {
+        const todaySubmission = await supabaseService.getCamperTodaySubmission(camper.id);
+        const camperSubmissions = allSubmissions.filter(s => s.camperId === camper.id);
+        const qualifiedDays = camperSubmissions.filter(s => s.missions.length >= settings.dailyRequired).length;
+        
+        return {
+          id: camper.id,
+          name: camper.name,
+          bunk: camper.bunkName,
+          totalMissions: todaySubmission ? todaySubmission.missions.length : 0,
+          qualifiedDays
+        };
+      }));
+      
+      return topCampers
+        .sort((a, b) => {
+          if (b.totalMissions !== a.totalMissions) {
+            return b.totalMissions - a.totalMissions;
+          }
+          return b.qualifiedDays - a.qualifiedDays;
+        })
+        .slice(0, 10);
+    } catch (error) {
+      console.error('Error calculating top campers:', error);
+      return [];
+    }
   };
 
   useEffect(() => {
-    setBunkStats(calculateBunkStats());
-    setTopCampers(calculateTopCampers());
+    const loadData = async () => {
+      const [bunkData, camperData] = await Promise.all([
+        calculateBunkStats(),
+        calculateTopCampers()
+      ]);
+      setBunkStats(bunkData);
+      setTopCampers(camperData);
+    };
+    
+    loadData();
     
     // Refresh data every 30 seconds
-    const interval = setInterval(() => {
-      setBunkStats(calculateBunkStats());
-      setTopCampers(calculateTopCampers());
-    }, 30000);
+    const interval = setInterval(loadData, 30000);
 
     return () => clearInterval(interval);
   }, []);

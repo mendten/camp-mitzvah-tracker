@@ -19,6 +19,9 @@ import AdminSettings from '@/components/AdminSettings';
 import PublicDashboard from '@/components/PublicDashboard';
 import AdminCardModal from '@/components/AdminCardModal';
 import AdminSupabaseSubmissions from '@/components/AdminSupabaseSubmissions';
+import WeeklyQualificationHistory from '@/components/WeeklyQualificationHistory';
+import CsvImportDialog from '@/components/CsvImportDialog';
+import IndividualCamperProgress from '@/pages/IndividualCamperProgress';
 import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrewDate';
 import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
 import { supabaseService } from '@/services/supabaseService';
@@ -30,6 +33,7 @@ const AdminDashboard = () => {
   const [showBunkManagement, setShowBunkManagement] = useState(false);
   const [activeTab, setActiveTab] = useState('public');
   const [modalType, setModalType] = useState<'campers' | 'qualified' | 'pending' | 'submissions' | null>(null);
+  const [showCsvImport, setShowCsvImport] = useState(false);
   const hebrewDate = getCurrentProperHebrewDate();
   const sessionInfo = getSessionInfo();
 
@@ -243,10 +247,12 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
             <TabsTrigger value="submissions">Supabase Submissions</TabsTrigger>
+            <TabsTrigger value="weekly-history">Weekly History</TabsTrigger>
+            <TabsTrigger value="individual">Individual Progress</TabsTrigger>
             <TabsTrigger value="historical">Historical</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="campers">Edit Campers</TabsTrigger>
@@ -264,7 +270,26 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="submissions">
-            <AdminSupabaseSubmissions />
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Supabase Submissions</h2>
+                <Button 
+                  onClick={() => setShowCsvImport(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Import CSV
+                </Button>
+              </div>
+              <AdminSupabaseSubmissions />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="weekly-history">
+            <WeeklyQualificationHistory />
+          </TabsContent>
+
+          <TabsContent value="individual">
+            <IndividualCamperProgress />
           </TabsContent>
 
           <TabsContent value="historical">
@@ -319,6 +344,15 @@ const AdminDashboard = () => {
         isOpen={modalType !== null}
         onClose={() => setModalType(null)}
         type={modalType || 'campers'}
+      />
+
+      <CsvImportDialog
+        isOpen={showCsvImport}
+        onClose={() => setShowCsvImport(false)}
+        onImportComplete={() => {
+          // Refresh data after import
+          window.location.reload();
+        }}
       />
     </div>
   );
