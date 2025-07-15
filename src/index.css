@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,45 +15,42 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 214 100% 27%;
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 214 50% 95%;
+    --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 214 50% 95%;
-    --accent-foreground: 214 100% 20%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 31.8% 91.4%;
-    --input: 214 31.8% 91.4%;
-    --ring: 214 100% 27%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 214 50% 98%;
-    --sidebar-foreground: 214 20% 26.1%;
-    --sidebar-primary: 214 100% 20%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 214 30% 95.9%;
-    --sidebar-accent-foreground: 214 100% 15%;
-    --sidebar-border: 214 20% 88%;
-    --sidebar-ring: 214 91.2% 59.8%;
+    --sidebar-background: 0 0% 98%;
 
-    /* TEMIMIM camp-specific blue tones */
-    --camp-blue-50: 214 100% 97%;
-    --camp-blue-100: 214 95% 93%;
-    --camp-blue-200: 214 89% 85%;
-    --camp-blue-300: 214 84% 75%;
-    --camp-blue-600: 214 75% 45%;
-    --camp-blue-700: 214 85% 35%;
-    --camp-blue-800: 214 90% 25%;
-    --camp-blue-900: 214 95% 15%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -103,27 +99,5 @@
 
   body {
     @apply bg-background text-foreground;
-  }
-}
-
-/* Custom TEMIMIM logo utilities */
-@layer utilities {
-  .temimim-logo-bg {
-    background-image: url('/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-  }
-  
-  .temimim-logo-watermark {
-    background-image: url('/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 60% auto;
-    opacity: 0.05;
-  }
-  
-  .camp-blue-gradient {
-    background: linear-gradient(135deg, hsl(214, 100%, 97%) 0%, hsl(214, 95%, 93%) 50%, hsl(214, 89%, 85%) 100%);
   }
 }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -140,51 +141,35 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 relative overflow-hidden">
-      {/* Single Large Background Logo */}
-      <div 
-        className="fixed inset-0 opacity-3 bg-no-repeat bg-center"
-        style={{
-          backgroundImage: `url('/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png')`,
-          backgroundSize: '50% auto',
-          backgroundPosition: 'center center',
-          zIndex: 0,
-        }}
-      />
-      
-      <header className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-blue-200 p-4 relative z-10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-green-100">
+      <header className="bg-white shadow-sm border-b p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/')}
-              className="flex items-center space-x-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+              className="flex items-center space-x-2"
             >
               <Home className="h-4 w-4" />
               <span>Home</span>
             </Button>
-            <img 
-              src="/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png" 
-              alt="TEMIMIM Logo" 
-              className="h-12 w-12 object-contain"
-            />
             <div>
-              <h1 className="text-2xl font-bold text-blue-900">TEMIMIM Admin Dashboard</h1>
-              <p className="text-sm text-blue-700 font-medium">{hebrewDate.hebrew}</p>
-              <p className="text-xs text-blue-600">{sessionInfo.hebrew}</p>
+              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-sm text-blue-600">{hebrewDate.hebrew}</p>
+              <p className="text-xs text-gray-600">{sessionInfo.hebrew}</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-blue-700">Online</span>
+              <span className="text-sm text-gray-600">Online</span>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="flex items-center space-x-2 border-red-300 text-red-700 hover:bg-red-50"
+              className="flex items-center space-x-2"
             >
               <LogOut className="h-4 w-4" />
               <span>Logout</span>
@@ -193,7 +178,7 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-6 space-y-6 relative z-10">
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Quick Stats Overview - Clickable Cards with Modals */}
         {loading ? (
           <div className="grid md:grid-cols-4 gap-4">
@@ -212,49 +197,49 @@ const AdminDashboard = () => {
         ) : (
           <div className="grid md:grid-cols-4 gap-4">
             <Card 
-              className="bg-white/90 backdrop-blur shadow-lg border-blue-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+              className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
               onClick={() => handleCardClick('campers')}
             >
-              <CardContent className="p-6 text-center relative z-10">
-                <Users className="h-12 w-12 mx-auto text-blue-700 mb-2" />
-                <div className="text-3xl font-bold text-blue-900">{allCampersWithStatus.length}</div>
-                <p className="text-blue-700">Total Campers</p>
+              <CardContent className="p-6 text-center">
+                <Users className="h-12 w-12 mx-auto text-blue-600 mb-2" />
+                <div className="text-3xl font-bold text-gray-900">{allCampersWithStatus.length}</div>
+                <p className="text-gray-600">Total Campers</p>
                 <p className="text-xs text-blue-600 mt-1">Click to view details</p>
               </CardContent>
             </Card>
           
           <Card 
-            className="bg-white/90 backdrop-blur shadow-lg border-green-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
             onClick={() => handleCardClick('qualified')}
           >
-            <CardContent className="p-6 text-center relative z-10">
-              <Calendar className="h-12 w-12 mx-auto text-green-700 mb-2" />
-              <div className="text-3xl font-bold text-green-900">{qualifiedToday}</div>
-              <p className="text-green-700">Qualified Today</p>
+            <CardContent className="p-6 text-center">
+              <Calendar className="h-12 w-12 mx-auto text-green-600 mb-2" />
+              <div className="text-3xl font-bold text-gray-900">{qualifiedToday}</div>
+              <p className="text-gray-600">Qualified Today</p>
               <p className="text-xs text-green-600 mt-1">Click to view qualified</p>
             </CardContent>
           </Card>
           
           <Card 
-            className="bg-white/90 backdrop-blur shadow-lg border-purple-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
             onClick={() => handleCardClick('pending')}
           >
-            <CardContent className="p-6 text-center relative z-10">
-              <BarChart3 className="h-12 w-12 mx-auto text-purple-700 mb-2" />
-              <div className="text-3xl font-bold text-purple-900">0</div>
-              <p className="text-purple-700">Pending Submissions</p>
+            <CardContent className="p-6 text-center">
+              <BarChart3 className="h-12 w-12 mx-auto text-purple-600 mb-2" />
+              <div className="text-3xl font-bold text-gray-900">0</div>
+              <p className="text-gray-600">Pending Submissions</p>
               <p className="text-xs text-purple-600 mt-1">Auto-approved system</p>
             </CardContent>
           </Card>
           
           <Card 
-            className="bg-white/90 backdrop-blur shadow-lg border-orange-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
             onClick={() => handleCardClick('submissions')}
           >
-            <CardContent className="p-6 text-center relative z-10">
-              <Shield className="h-12 w-12 mx-auto text-orange-700 mb-2" />
-              <div className="text-3xl font-bold text-orange-900">{totalSubmissions}</div>
-              <p className="text-orange-700">Total Submissions</p>
+            <CardContent className="p-6 text-center">
+              <Shield className="h-12 w-12 mx-auto text-orange-600 mb-2" />
+              <div className="text-3xl font-bold text-gray-900">{totalSubmissions}</div>
+              <p className="text-gray-600">Total Submissions</p>
               <p className="text-xs text-orange-600 mt-1">Click to view history</p>
             </CardContent>
           </Card>
@@ -262,18 +247,18 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-11 bg-white/80 backdrop-blur border border-blue-200">
-            <TabsTrigger value="public" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Public View</TabsTrigger>
-            <TabsTrigger value="reports" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">All Campers</TabsTrigger>
-            <TabsTrigger value="submissions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Supabase Submissions</TabsTrigger>
-            <TabsTrigger value="weekly-history" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Weekly History</TabsTrigger>
-            <TabsTrigger value="individual" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Individual Progress</TabsTrigger>
-            <TabsTrigger value="historical" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Historical</TabsTrigger>
-            <TabsTrigger value="sessions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Sessions</TabsTrigger>
-            <TabsTrigger value="campers" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Edit Campers</TabsTrigger>
-            <TabsTrigger value="missions" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Edit Missions</TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Analytics</TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900">Settings</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-11">
+            <TabsTrigger value="public">Public View</TabsTrigger>
+            <TabsTrigger value="reports">All Campers</TabsTrigger>
+            <TabsTrigger value="submissions">Supabase Submissions</TabsTrigger>
+            <TabsTrigger value="weekly-history">Weekly History</TabsTrigger>
+            <TabsTrigger value="individual">Individual Progress</TabsTrigger>
+            <TabsTrigger value="historical">Historical</TabsTrigger>
+            <TabsTrigger value="sessions">Sessions</TabsTrigger>
+            <TabsTrigger value="campers">Edit Campers</TabsTrigger>
+            <TabsTrigger value="missions">Edit Missions</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="public">
