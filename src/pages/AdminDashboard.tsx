@@ -141,13 +141,13 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 relative overflow-hidden">
-      {/* Background Logo Pattern */}
+      {/* Single Large Background Logo */}
       <div 
-        className="fixed inset-0 opacity-3 bg-repeat"
+        className="fixed inset-0 opacity-3 bg-no-repeat bg-center"
         style={{
-          backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-          backgroundSize: '150px 150px',
-          backgroundPosition: 'center',
+          backgroundImage: `url('/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png')`,
+          backgroundSize: '50% auto',
+          backgroundPosition: 'center center',
           zIndex: 0,
         }}
       />
@@ -165,12 +165,12 @@ const AdminDashboard = () => {
               <span>Home</span>
             </Button>
             <img 
-              src="/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png" 
-              alt="Camp Logo" 
+              src="/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png" 
+              alt="TEMIMIM Logo" 
               className="h-12 w-12 object-contain"
             />
             <div>
-              <h1 className="text-2xl font-bold text-blue-900">Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold text-blue-900">TEMIMIM Admin Dashboard</h1>
               <p className="text-sm text-blue-700 font-medium">{hebrewDate.hebrew}</p>
               <p className="text-xs text-blue-600">{sessionInfo.hebrew}</p>
             </div>
@@ -212,19 +212,9 @@ const AdminDashboard = () => {
         ) : (
           <div className="grid md:grid-cols-4 gap-4">
             <Card 
-              className="bg-white/90 backdrop-blur shadow-lg border-blue-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden"
+              className="bg-white/90 backdrop-blur shadow-lg border-blue-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
               onClick={() => handleCardClick('campers')}
             >
-              <div 
-                className="absolute top-2 right-2 opacity-10"
-                style={{
-                  backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                  backgroundSize: '30px 30px',
-                  backgroundRepeat: 'no-repeat',
-                  width: '30px',
-                  height: '30px',
-                }}
-              />
               <CardContent className="p-6 text-center relative z-10">
                 <Users className="h-12 w-12 mx-auto text-blue-700 mb-2" />
                 <div className="text-3xl font-bold text-blue-900">{allCampersWithStatus.length}</div>
@@ -234,19 +224,9 @@ const AdminDashboard = () => {
             </Card>
           
           <Card 
-            className="bg-white/90 backdrop-blur shadow-lg border-green-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden"
+            className="bg-white/90 backdrop-blur shadow-lg border-green-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
             onClick={() => handleCardClick('qualified')}
           >
-            <div 
-              className="absolute top-2 right-2 opacity-10"
-              style={{
-                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                backgroundSize: '30px 30px',
-                backgroundRepeat: 'no-repeat',
-                width: '30px',
-                height: '30px',
-              }}
-            />
             <CardContent className="p-6 text-center relative z-10">
               <Calendar className="h-12 w-12 mx-auto text-green-700 mb-2" />
               <div className="text-3xl font-bold text-green-900">{qualifiedToday}</div>
@@ -256,19 +236,9 @@ const AdminDashboard = () => {
           </Card>
           
           <Card 
-            className="bg-white/90 backdrop-blur shadow-lg border-purple-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden"
+            className="bg-white/90 backdrop-blur shadow-lg border-purple-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
             onClick={() => handleCardClick('pending')}
           >
-            <div 
-              className="absolute top-2 right-2 opacity-10"
-              style={{
-                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                backgroundSize: '30px 30px',
-                backgroundRepeat: 'no-repeat',
-                width: '30px',
-                height: '30px',
-              }}
-            />
             <CardContent className="p-6 text-center relative z-10">
               <BarChart3 className="h-12 w-12 mx-auto text-purple-700 mb-2" />
               <div className="text-3xl font-bold text-purple-900">0</div>
@@ -278,19 +248,9 @@ const AdminDashboard = () => {
           </Card>
           
           <Card 
-            className="bg-white/90 backdrop-blur shadow-lg border-orange-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden"
+            className="bg-white/90 backdrop-blur shadow-lg border-orange-200 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
             onClick={() => handleCardClick('submissions')}
           >
-            <div 
-              className="absolute top-2 right-2 opacity-10"
-              style={{
-                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                backgroundSize: '30px 30px',
-                backgroundRepeat: 'no-repeat',
-                width: '30px',
-                height: '30px',
-              }}
-            />
             <CardContent className="p-6 text-center relative z-10">
               <Shield className="h-12 w-12 mx-auto text-orange-700 mb-2" />
               <div className="text-3xl font-bold text-orange-900">{totalSubmissions}</div>

@@ -12,13 +12,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 relative overflow-hidden">
-      {/* Background Logo Pattern */}
+      {/* Single Large Background Logo */}
       <div 
-        className="absolute inset-0 opacity-5 bg-repeat-y"
+        className="fixed inset-0 opacity-5 bg-no-repeat bg-center"
         style={{
-          backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-          backgroundSize: '200px 200px',
-          backgroundPosition: 'center',
+          backgroundImage: `url('/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png')`,
+          backgroundSize: '60% auto',
+          backgroundPosition: 'center center',
+          zIndex: 0,
         }}
       />
       
@@ -28,15 +29,15 @@ const Index = () => {
             {/* Logo */}
             <div className="flex-shrink-0">
               <img 
-                src="/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png" 
-                alt="Camp Gan Yisroel Florida Logo" 
+                src="/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png" 
+                alt="TEMIMIM Florida Logo" 
                 className="h-20 w-20 object-contain"
               />
             </div>
             
             {/* Title and Date */}
             <div className="text-center space-y-2">
-              <h1 className="text-4xl font-bold text-blue-900">Camp Gan Yisroel Florida</h1>
+              <h1 className="text-4xl font-bold text-blue-900">TEMIMIM Florida</h1>
               <p className="text-xl text-blue-700 font-semibold">{hebrewDate.hebrew}</p>
               <p className="text-lg text-blue-600">{hebrewDate.english}</p>
             </div>
@@ -47,18 +48,7 @@ const Index = () => {
       <main className="max-w-7xl mx-auto p-6 space-y-8 relative z-10">
         {/* Login Cards */}
         <div className="grid md:grid-cols-3 gap-6">
-          <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-300 bg-white/80 backdrop-blur-sm hover:scale-105 relative overflow-hidden">
-            {/* Card background logo */}
-            <div 
-              className="absolute top-2 right-2 opacity-10"
-              style={{
-                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                backgroundSize: '40px 40px',
-                backgroundRepeat: 'no-repeat',
-                width: '40px',
-                height: '40px',
-              }}
-            />
+          <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-300 bg-white/80 backdrop-blur-sm hover:scale-105">
             <CardHeader className="text-center pb-4">
               <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                 <Users className="h-8 w-8 text-blue-700" />
@@ -78,17 +68,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-green-300 bg-white/80 backdrop-blur-sm hover:scale-105 relative overflow-hidden">
-            <div 
-              className="absolute top-2 right-2 opacity-10"
-              style={{
-                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                backgroundSize: '40px 40px',
-                backgroundRepeat: 'no-repeat',
-                width: '40px',
-                height: '40px',
-              }}
-            />
+          <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-green-300 bg-white/80 backdrop-blur-sm hover:scale-105">
             <CardHeader className="text-center pb-4">
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <UserCheck className="h-8 w-8 text-green-700" />
@@ -108,17 +88,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-purple-300 bg-white/80 backdrop-blur-sm hover:scale-105 relative overflow-hidden">
-            <div 
-              className="absolute top-2 right-2 opacity-10"
-              style={{
-                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                backgroundSize: '40px 40px',
-                backgroundRepeat: 'no-repeat',
-                width: '40px',
-                height: '40px',
-              }}
-            />
+          <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-purple-300 bg-white/80 backdrop-blur-sm hover:scale-105">
             <CardHeader className="text-center pb-4">
               <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
                 <Shield className="h-8 w-8 text-purple-700" />
@@ -141,27 +111,17 @@ const Index = () => {
 
         {/* Public Dashboard */}
         <div className="mt-12">
-          <div className="text-center mb-8 bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-blue-200 relative overflow-hidden">
-            <div 
-              className="absolute inset-0 opacity-5"
-              style={{
-                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
-                backgroundSize: '100px 100px',
-                backgroundRepeat: 'repeat',
-              }}
-            />
-            <div className="relative z-10">
-              <h2 className="text-3xl font-bold text-blue-900 mb-4 flex items-center justify-center space-x-4">
-                <BarChart3 className="h-8 w-8 text-blue-700" />
-                <span>Live Camp Dashboard</span>
-                <img 
-                  src="/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png" 
-                  alt="Camp Logo" 
-                  className="h-8 w-8 object-contain"
-                />
-              </h2>
-              <p className="text-lg text-blue-700">Real-time camp statistics and leaderboards</p>
-            </div>
+          <div className="text-center mb-8 bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-blue-200">
+            <h2 className="text-3xl font-bold text-blue-900 mb-4 flex items-center justify-center space-x-4">
+              <BarChart3 className="h-8 w-8 text-blue-700" />
+              <span>Live Camp Dashboard</span>
+              <img 
+                src="/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png" 
+                alt="TEMIMIM Logo" 
+                className="h-8 w-8 object-contain"
+              />
+            </h2>
+            <p className="text-lg text-blue-700">Real-time camp statistics and leaderboards</p>
           </div>
           <PublicDashboard />
         </div>

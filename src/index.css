@@ -46,7 +46,7 @@
     --sidebar-border: 214 20% 88%;
     --sidebar-ring: 214 91.2% 59.8%;
 
-    /* Camp-specific blue tones */
+    /* TEMIMIM camp-specific blue tones */
     --camp-blue-50: 214 100% 97%;
     --camp-blue-100: 214 95% 93%;
     --camp-blue-200: 214 89% 85%;
@@ -106,19 +106,21 @@
   }
 }
 
-/* Custom camp logo utilities */
+/* Custom TEMIMIM logo utilities */
 @layer utilities {
-  .camp-logo-bg {
-    background-image: url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png');
+  .temimim-logo-bg {
+    background-image: url('/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png');
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
   }
   
-  .camp-logo-pattern {
-    background-image: url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png');
-    background-repeat: repeat;
-    background-size: 150px 150px;
+  .temimim-logo-watermark {
+    background-image: url('/lovable-uploads/e7a1a4b6-8ae6-4b14-8b3a-39169bb6dc9f.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 60% auto;
+    opacity: 0.05;
   }
   
   .camp-blue-gradient {
