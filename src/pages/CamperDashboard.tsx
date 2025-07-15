@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -206,26 +205,42 @@ const CamperDashboard = () => {
   const qualificationDisplay = getQualificationDisplay();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 relative overflow-hidden">
+      {/* Background Logo Pattern */}
+      <div 
+        className="fixed inset-0 opacity-3 bg-repeat"
+        style={{
+          backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+          backgroundSize: '120px 120px',
+          backgroundPosition: 'center',
+          zIndex: 0,
+        }}
+      />
+      
       {/* Header */}
-      <header className="bg-white shadow-sm border-b p-4">
+      <header className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-blue-200 p-4 relative z-10">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 border-blue-300 text-blue-700 hover:bg-blue-50"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Logout</span>
             </Button>
+            <img 
+              src="/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png" 
+              alt="Camp Logo" 
+              className="h-12 w-12 object-contain"
+            />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-blue-900">
                 Welcome back, {selectedCamper.name}! 👋
               </h1>
-              <p className="text-sm text-blue-600">{hebrewDate.hebrew}</p>
-              <p className="text-xs text-gray-600">{sessionInfo.hebrew}</p>
+              <p className="text-sm text-blue-700 font-medium">{hebrewDate.hebrew}</p>
+              <p className="text-xs text-blue-600">{sessionInfo.hebrew}</p>
               {staffCounselor && (
                 <p className="text-xs text-purple-600">Counselor: {staffCounselor}</p>
               )}
@@ -233,21 +248,31 @@ const CamperDashboard = () => {
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-gray-600">Bunk {selectedCamper.bunkName}</span>
+            <span className="text-sm text-blue-700">Bunk {selectedCamper.bunkName}</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
+      <main className="max-w-6xl mx-auto p-6 space-y-6 relative z-10">
         {/* Show completed message for already submitted */}
         {submissionStatus !== 'none' && (
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
+          <Card className="bg-blue-50/80 backdrop-blur border-blue-200 relative overflow-hidden">
+            <div 
+              className="absolute top-2 right-2 opacity-10"
+              style={{
+                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+                backgroundSize: '50px 50px',
+                backgroundRepeat: 'no-repeat',
+                width: '50px',
+                height: '50px',
+              }}
+            />
+            <CardContent className="pt-6 relative z-10">
               <div className="text-center">
                 <h2 className="text-2xl font-bold text-blue-900 mb-2">
                   🎉 You completed {completedCount} missions today!
                 </h2>
-                <p className="text-blue-700">
+                <p className="text-blue-800">
                   Your submission has been automatically approved. Great job!
                 </p>
               </div>
@@ -257,72 +282,122 @@ const CamperDashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-5 gap-4">
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-            <CardHeader className="pb-3">
+          <Card className="bg-white/90 backdrop-blur shadow-lg border-blue-200 relative overflow-hidden">
+            <div 
+              className="absolute top-2 right-2 opacity-10"
+              style={{
+                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+                backgroundSize: '25px 25px',
+                backgroundRepeat: 'no-repeat',
+                width: '25px',
+                height: '25px',
+              }}
+            />
+            <CardHeader className="pb-3 relative z-10">
               <CardTitle className="text-lg flex items-center space-x-2">
-                <User className="h-5 w-5 text-blue-600" />
-                <span>Progress</span>
+                <User className="h-5 w-5 text-blue-700" />
+                <span className="text-blue-900">Progress</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{progressPercentage}%</div>
-              <p className="text-sm text-gray-600">{completedCount} of {totalMissions} missions</p>
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-bold text-blue-900">{progressPercentage}%</div>
+              <p className="text-sm text-blue-700">{completedCount} of {totalMissions} missions</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-            <CardHeader className="pb-3">
+          <Card className="bg-white/90 backdrop-blur shadow-lg border-blue-200 relative overflow-hidden">
+            <div 
+              className="absolute top-2 right-2 opacity-10"
+              style={{
+                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+                backgroundSize: '25px 25px',
+                backgroundRepeat: 'no-repeat',
+                width: '25px',
+                height: '25px',
+              }}
+            />
+            <CardHeader className="pb-3 relative z-10">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Trophy className="h-5 w-5 text-yellow-600" />
-                <span>Selected</span>
+                <span className="text-blue-900">Selected</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{completedCount}</div>
-              <p className="text-sm text-gray-600">Missions chosen</p>
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-bold text-blue-900">{completedCount}</div>
+              <p className="text-sm text-blue-700">Missions chosen</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-            <CardHeader className="pb-3">
+          <Card className="bg-white/90 backdrop-blur shadow-lg border-blue-200 relative overflow-hidden">
+            <div 
+              className="absolute top-2 right-2 opacity-10"
+              style={{
+                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+                backgroundSize: '25px 25px',
+                backgroundRepeat: 'no-repeat',
+                width: '25px',
+                height: '25px',
+              }}
+            />
+            <CardHeader className="pb-3 relative z-10">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-green-600" />
-                <span>Required</span>
+                <span className="text-blue-900">Required</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{dailyRequired}</div>
-              <p className="text-sm text-gray-600">For qualification</p>
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-bold text-blue-900">{dailyRequired}</div>
+              <p className="text-sm text-blue-700">For qualification</p>
             </CardContent>
           </Card>
 
-          <Card className={`backdrop-blur shadow-lg border-0 ${qualificationDisplay.bg}`}>
-            <CardHeader className="pb-3">
+          <Card className={`backdrop-blur shadow-lg border-0 ${qualificationDisplay.bg} relative overflow-hidden`}>
+            <div 
+              className="absolute top-2 right-2 opacity-10"
+              style={{
+                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+                backgroundSize: '25px 25px',
+                backgroundRepeat: 'no-repeat',
+                width: '25px',
+                height: '25px',
+              }}
+            />
+            <CardHeader className="pb-3 relative z-10">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <User className="h-5 w-5 text-purple-600" />
-                <span>Qualification</span>
+                <span className="text-blue-900">Qualification</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               <div className={`text-lg font-bold ${qualificationDisplay.color}`}>
                 {qualificationDisplay.text}
               </div>
-              <p className="text-sm text-gray-600">Daily goal</p>
+              <p className="text-sm text-blue-700">Daily goal</p>
             </CardContent>
           </Card>
 
-          <Card className={`backdrop-blur shadow-lg border-0 ${statusDisplay.bg}`}>
-            <CardHeader className="pb-3">
+          <Card className={`backdrop-blur shadow-lg border-0 ${statusDisplay.bg} relative overflow-hidden`}>
+            <div 
+              className="absolute top-2 right-2 opacity-10"
+              style={{
+                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+                backgroundSize: '25px 25px',
+                backgroundRepeat: 'no-repeat',
+                width: '25px',
+                height: '25px',
+              }}
+            />
+            <CardHeader className="pb-3 relative z-10">
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Calendar className="h-5 w-5 text-indigo-600" />
-                <span>Status</span>
+                <span className="text-blue-900">Status</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               <div className={`text-lg font-bold ${statusDisplay.color}`}>
                 {statusDisplay.text}
               </div>
-              <p className="text-sm text-gray-600">Today's status</p>
+              <p className="text-sm text-blue-700">Today's status</p>
             </CardContent>
           </Card>
         </div>
@@ -332,15 +407,25 @@ const CamperDashboard = () => {
 
         {/* Missions Card - only show if not submitted */}
         {submissionStatus === 'none' && (
-          <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center justify-between">
+          <Card className="bg-white/90 backdrop-blur shadow-lg border-blue-200 relative overflow-hidden">
+            <div 
+              className="absolute top-4 right-4 opacity-5"
+              style={{
+                backgroundImage: `url('/lovable-uploads/3e849155-a2e3-4667-a070-7289c4581a44.png')`,
+                backgroundSize: '80px 80px',
+                backgroundRepeat: 'no-repeat',
+                width: '80px',
+                height: '80px',
+              }}
+            />
+            <CardHeader className="relative z-10">
+              <CardTitle className="text-xl flex items-center justify-between text-blue-900">
                 <span>Today's Missions</span>
                 <div className="flex space-x-2">
                   {canSubmit && (
                     <Button
                       onClick={handleSubmit}
-                      className="bg-green-600 hover:bg-green-700 flex items-center space-x-2"
+                      className="bg-green-700 hover:bg-green-800 flex items-center space-x-2 text-white"
                     >
                       <Send className="h-4 w-4" />
                       <span>Submit {completedCount} Missions</span>
@@ -348,16 +433,16 @@ const CamperDashboard = () => {
                   )}
                 </div>
               </CardTitle>
-              <p className="text-gray-600">
+              <p className="text-blue-700">
                 Select your completed missions and submit when ready. You can submit with any number of missions. You need at least {dailyRequired} missions to qualify for the day.
               </p>
               {!isQualified && (
-                <p className="text-orange-600 text-sm font-medium">
+                <p className="text-orange-700 text-sm font-medium">
                   ⚠️ You need {Math.max(0, dailyRequired - completedCount)} more missions to qualify, but you can still submit with {completedCount} missions.
                 </p>
               )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {missions.map((mission) => (
                   <MissionCard
