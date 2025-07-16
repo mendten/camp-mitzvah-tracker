@@ -9,140 +9,248 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Target, Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
-import { Mission as CampMission, DEFAULT_MISSIONS } from '@/data/campData';
+import { Target, Plus, Edit2, Trash2, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { supabaseService } from '@/services/supabaseService';
 
-interface ExtendedMission extends CampMission {
-  description?: string;
-  category?: string;
-  points?: number;
+interface ExtendedMission {
+  id: string;
+  title: string;
+  type: string;
+  icon: string;
+  isMandatory: boolean;
+  isActive: boolean;
+  sortOrder?: number;
 }
 
 const MissionManagement = () => {
   const { toast } = useToast();
   const [missions, setMissions] = useState<ExtendedMission[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedMission, setSelectedMission] = useState<ExtendedMission | null>(null);
   const [newMission, setNewMission] = useState({
     title: '',
-    description: '',
+    type: 'general',
     icon: '⭐',
     isActive: true,
-    category: 'General',
-    points: 1
+    isMandatory: false
   });
 
   useEffect(() => {
     loadMissions();
   }, []);
 
-  const loadMissions = () => {
-    // Convert DEFAULT_MISSIONS to ExtendedMission format
-    const extendedMissions: ExtendedMission[] = DEFAULT_MISSIONS.map(mission => ({
-      ...mission,
-      description: mission.title, // Use title as description for existing missions
-      category: mission.type,
-      points: 1
-    }));
-    setMissions(extendedMissions);
+  const loadMissions = async () => {
+    console.log('Loading missions from Supabase...');
+    setLoading(true);
+    try {
+      const supabaseMissions = await supabaseService.getAllMissions();
+      console.log('Loaded missions:', supabaseMissions);
+      setMissions(supabaseMissions);
+    } catch (error) {
+      console.error('Error loading missions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load missions from Supabase.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const saveMissions = (updatedMissions: ExtendedMission[]) => {
-    setMissions(updatedMissions);
-  };
-
-  const handleAddMission = () => {
-    if (!newMission.title || !newMission.description) {
+  const handleAddMission = async () => {
+    if (!newMission.title.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please fill in title and description.",
+        description: "Please fill in the mission title.",
         variant: "destructive"
       });
       return;
     }
 
-    const mission: ExtendedMission = {
-      id: `mission_${Date.now()}`,
-      title: newMission.title,
-      description: newMission.description,
-      type: newMission.category?.toLowerCase() || 'general',
-      icon: newMission.icon,
-      isMandatory: false,
-      isActive: newMission.isActive,
-      category: newMission.category,
-      points: newMission.points
-    };
+    try {
+      // Create mission ID
+      const missionId = `mission_${Date.now()}`;
+      
+      // For now, we'll use the supabase client directly since the service doesn't have a create method
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('missions')
+        .insert({
+          id: missionId,
+          title: newMission.title,
+          type: newMission.type,
+          icon: newMission.icon,
+          is_active: newMission.isActive,
+          is_mandatory: newMission.isMandatory,
+          sort_order: missions.length
+        });
 
-    const updatedMissions = [...missions, mission];
-    saveMissions(updatedMissions);
-    
-    setNewMission({
-      title: '',
-      description: '',
-      icon: '⭐',
-      isActive: true,
-      category: 'General',
-      points: 1
-    });
-    setShowAddDialog(false);
-    
-    toast({
-      title: "Mission Added",
-      description: `"${mission.title}" has been added to the mission list.`,
-    });
+      if (error) {
+        throw error;
+      }
+
+      // Reload missions to show the new one
+      await loadMissions();
+      
+      setNewMission({
+        title: '',
+        type: 'general',
+        icon: '⭐',
+        isActive: true,
+        isMandatory: false
+      });
+      setShowAddDialog(false);
+      
+      toast({
+        title: "Mission Added",
+        description: `"${newMission.title}" has been added successfully.`,
+      });
+    } catch (error) {
+      console.error('Error adding mission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add mission. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleEditMission = () => {
-    if (!selectedMission || !selectedMission.title || !selectedMission.description) {
+  const handleEditMission = async () => {
+    if (!selectedMission || !selectedMission.title.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please fill in title and description.",
+        description: "Please fill in the mission title.",
         variant: "destructive"
       });
       return;
     }
 
-    const updatedMissions = missions.map(m => 
-      m.id === selectedMission.id ? selectedMission : m
-    );
-    
-    saveMissions(updatedMissions);
-    
-    setSelectedMission(null);
-    setShowEditDialog(false);
-    
-    toast({
-      title: "Mission Updated",
-      description: `"${selectedMission.title}" has been updated.`,
-    });
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('missions')
+        .update({
+          title: selectedMission.title,
+          type: selectedMission.type,
+          icon: selectedMission.icon,
+          is_active: selectedMission.isActive,
+          is_mandatory: selectedMission.isMandatory
+        })
+        .eq('id', selectedMission.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload missions to show the updates
+      await loadMissions();
+      
+      setSelectedMission(null);
+      setShowEditDialog(false);
+      
+      toast({
+        title: "Mission Updated",
+        description: `"${selectedMission.title}" has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error('Error updating mission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update mission. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleDeleteMission = (missionId: string) => {
+  const handleDeleteMission = async (missionId: string) => {
     const mission = missions.find(m => m.id === missionId);
     if (!mission) return;
 
-    const updatedMissions = missions.filter(m => m.id !== missionId);
-    saveMissions(updatedMissions);
-    
-    toast({
-      title: "Mission Deleted",
-      description: `"${mission.title}" has been removed.`,
-    });
+    if (!confirm(`Are you sure you want to delete "${mission.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('missions')
+        .delete()
+        .eq('id', missionId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload missions to reflect the deletion
+      await loadMissions();
+      
+      toast({
+        title: "Mission Deleted",
+        description: `"${mission.title}" has been removed successfully.`,
+      });
+    } catch (error) {
+      console.error('Error deleting mission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete mission. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleToggleActive = (missionId: string) => {
-    const updatedMissions = missions.map(m => 
-      m.id === missionId ? { ...m, isActive: !m.isActive } : m
-    );
-    saveMissions(updatedMissions);
-    
+  const handleToggleActive = async (missionId: string) => {
     const mission = missions.find(m => m.id === missionId);
-    toast({
-      title: `Mission ${mission?.isActive ? 'Deactivated' : 'Activated'}`,
-      description: `"${mission?.title}" is now ${mission?.isActive ? 'inactive' : 'active'}.`,
-    });
+    if (!mission) return;
+
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('missions')
+        .update({
+          is_active: !mission.isActive
+        })
+        .eq('id', missionId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload missions to reflect the change
+      await loadMissions();
+      
+      toast({
+        title: `Mission ${mission.isActive ? 'Deactivated' : 'Activated'}`,
+        description: `"${mission.title}" is now ${mission.isActive ? 'inactive' : 'active'}.`,
+      });
+    } catch (error) {
+      console.error('Error toggling mission status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update mission status. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading missions from Supabase...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const activeMissions = missions.filter(m => m.isActive);
   const inactiveMissions = missions.filter(m => !m.isActive);
@@ -155,87 +263,87 @@ const MissionManagement = () => {
             <Target className="h-6 w-6 text-purple-600" />
             <span>Mission Management</span>
           </div>
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Mission
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Mission</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Mission Title</Label>
-                  <Input
-                    id="title"
-                    value={newMission.title}
-                    onChange={(e) => setNewMission(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Enter mission title"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newMission.description}
-                    onChange={(e) => setNewMission(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Enter mission description"
-                    rows={3}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              onClick={loadMissions}
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Refresh</span>
+            </Button>
+            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-purple-600 hover:bg-purple-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Mission
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add New Mission</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="icon">Icon/Emoji</Label>
+                    <Label htmlFor="title">Mission Title</Label>
                     <Input
-                      id="icon"
-                      value={newMission.icon}
-                      onChange={(e) => setNewMission(prev => ({ ...prev, icon: e.target.value }))}
-                      placeholder="⭐"
-                      maxLength={2}
+                      id="title"
+                      value={newMission.title}
+                      onChange={(e) => setNewMission(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Enter mission title"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="points">Points</Label>
-                    <Input
-                      id="points"
-                      type="number"
-                      value={newMission.points}
-                      onChange={(e) => setNewMission(prev => ({ ...prev, points: parseInt(e.target.value) || 1 }))}
-                      min={1}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="icon">Icon/Emoji</Label>
+                      <Input
+                        id="icon"
+                        value={newMission.icon}
+                        onChange={(e) => setNewMission(prev => ({ ...prev, icon: e.target.value }))}
+                        placeholder="⭐"
+                        maxLength={2}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="type">Type</Label>
+                      <Input
+                        id="type"
+                        value={newMission.type}
+                        onChange={(e) => setNewMission(prev => ({ ...prev, type: e.target.value }))}
+                        placeholder="general"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="active"
+                        checked={newMission.isActive}
+                        onCheckedChange={(checked) => setNewMission(prev => ({ ...prev, isActive: checked }))}
+                      />
+                      <Label htmlFor="active">Active</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="mandatory"
+                        checked={newMission.isMandatory}
+                        onCheckedChange={(checked) => setNewMission(prev => ({ ...prev, isMandatory: checked }))}
+                      />
+                      <Label htmlFor="mandatory">Mandatory</Label>
+                    </div>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddMission}>
+                      Add Mission
+                    </Button>
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    value={newMission.category}
-                    onChange={(e) => setNewMission(prev => ({ ...prev, category: e.target.value }))}
-                    placeholder="General"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="active"
-                    checked={newMission.isActive}
-                    onCheckedChange={(checked) => setNewMission(prev => ({ ...prev, isActive: checked }))}
-                  />
-                  <Label htmlFor="active">Active</Label>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddMission}>
-                    Add Mission
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -265,8 +373,10 @@ const MissionManagement = () => {
                   <span className="text-2xl">{mission.icon}</span>
                   <div>
                     <h4 className="font-medium">{mission.title}</h4>
-                    <p className="text-sm text-gray-600">{mission.description}</p>
-                    {mission.category && <Badge variant="outline" className="mt-1">{mission.category}</Badge>}
+                    <div className="flex space-x-2 mt-1">
+                      <Badge variant="outline">{mission.type}</Badge>
+                      {mission.isMandatory && <Badge variant="destructive">Mandatory</Badge>}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -313,8 +423,10 @@ const MissionManagement = () => {
                     <span className="text-2xl opacity-50">{mission.icon}</span>
                     <div>
                       <h4 className="font-medium opacity-75">{mission.title}</h4>
-                      <p className="text-sm text-gray-500">{mission.description}</p>
-                      {mission.category && <Badge variant="outline" className="mt-1 opacity-50">{mission.category}</Badge>}
+                      <div className="flex space-x-2 mt-1">
+                        <Badge variant="outline" className="opacity-50">{mission.type}</Badge>
+                        {mission.isMandatory && <Badge variant="destructive" className="opacity-50">Mandatory</Badge>}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -368,15 +480,6 @@ const MissionManagement = () => {
                   onChange={(e) => setSelectedMission(prev => prev ? { ...prev, title: e.target.value } : null)}
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={selectedMission.description || ''}
-                  onChange={(e) => setSelectedMission(prev => prev ? { ...prev, description: e.target.value } : null)}
-                  rows={3}
-                />
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-icon">Icon/Emoji</Label>
@@ -388,31 +491,31 @@ const MissionManagement = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-points">Points</Label>
+                  <Label htmlFor="edit-type">Type</Label>
                   <Input
-                    id="edit-points"
-                    type="number"
-                    value={selectedMission.points || 1}
-                    onChange={(e) => setSelectedMission(prev => prev ? { ...prev, points: parseInt(e.target.value) || 1 } : null)}
-                    min={1}
+                    id="edit-type"
+                    value={selectedMission.type}
+                    onChange={(e) => setSelectedMission(prev => prev ? { ...prev, type: e.target.value } : null)}
                   />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="edit-category">Category</Label>
-                <Input
-                  id="edit-category"
-                  value={selectedMission.category || ''}
-                  onChange={(e) => setSelectedMission(prev => prev ? { ...prev, category: e.target.value } : null)}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edit-active"
-                  checked={selectedMission.isActive}
-                  onCheckedChange={(checked) => setSelectedMission(prev => prev ? { ...prev, isActive: checked } : null)}
-                />
-                <Label htmlFor="edit-active">Active</Label>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="edit-active"
+                    checked={selectedMission.isActive}
+                    onCheckedChange={(checked) => setSelectedMission(prev => prev ? { ...prev, isActive: checked } : null)}
+                  />
+                  <Label htmlFor="edit-active">Active</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="edit-mandatory"
+                    checked={selectedMission.isMandatory}
+                    onCheckedChange={(checked) => setSelectedMission(prev => prev ? { ...prev, isMandatory: checked } : null)}
+                  />
+                  <Label htmlFor="edit-mandatory">Mandatory</Label>
+                </div>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setShowEditDialog(false)}>

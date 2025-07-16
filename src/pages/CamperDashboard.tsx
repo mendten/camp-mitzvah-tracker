@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, Trophy, Clock, Send, History } from 'lucide-react';
 import CamperHistoryView from '@/components/CamperHistoryView';
 import { useToast } from '@/hooks/use-toast';
-import { DEFAULT_MISSIONS } from '@/data/campData';
 import MissionCard from '@/components/MissionCard';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
 import { supabaseService } from '@/services/supabaseService';
@@ -15,10 +14,11 @@ const CamperDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedCamper, setSelectedCamper] = useState<any>(null);
-  const [missions, setMissions] = useState(DEFAULT_MISSIONS.filter(m => m.isActive));
-  const [selectedMissions, setSelectedMissions] = useState<Set<string>>(new Set()); // Local state only
+  const [missions, setMissions] = useState<any[]>([]);
+  const [selectedMissions, setSelectedMissions] = useState<Set<string>>(new Set());
   const [submissionStatus, setSubmissionStatus] = useState<'none' | 'submitted'>('none');
   const [loading, setLoading] = useState(true);
+  const [missionsLoading, setMissionsLoading] = useState(true);
   const [staffCounselor, setStaffCounselor] = useState<string>('');
   const [dailyRequired, setDailyRequired] = useState(3);
   const hebrewDate = getCurrentHebrewDate();
@@ -26,7 +26,39 @@ const CamperDashboard = () => {
 
   useEffect(() => {
     loadCamperData();
+    loadMissions();
   }, [navigate]);
+
+  const loadMissions = async () => {
+    console.log('Loading missions from Supabase...');
+    setMissionsLoading(true);
+    try {
+      const supabaseMissions = await supabaseService.getAllMissions();
+      console.log('Loaded missions from Supabase:', supabaseMissions);
+      
+      // Convert Supabase missions to the format expected by the component
+      const formattedMissions = supabaseMissions.map(mission => ({
+        id: mission.id,
+        title: mission.title,
+        type: mission.type,
+        icon: mission.icon,
+        isMandatory: mission.isMandatory,
+        isActive: mission.isActive
+      }));
+      
+      setMissions(formattedMissions);
+    } catch (error) {
+      console.error('Error loading missions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load missions. Please try again.",
+        variant: "destructive"
+      });
+      setMissions([]);
+    } finally {
+      setMissionsLoading(false);
+    }
+  };
 
   const loadCamperData = async () => {
     console.log('CamperDashboard - checking localStorage...');
@@ -358,19 +390,30 @@ const CamperDashboard = () => {
               )}
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {missions.map((mission) => (
-                  <MissionCard
-                    key={mission.id}
-                    mission={{
-                      ...mission,
-                      completed: selectedMissions.has(mission.id)
-                    }}
-                    onToggle={() => toggleMission(mission.id)}
-                    disabled={false}
-                  />
-                ))}
-              </div>
+              {missionsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading missions...</p>
+                </div>
+              ) : missions.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">No missions available at this time.</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {missions.map((mission) => (
+                    <MissionCard
+                      key={mission.id}
+                      mission={{
+                        ...mission,
+                        completed: selectedMissions.has(mission.id)
+                      }}
+                      onToggle={() => toggleMission(mission.id)}
+                      disabled={false}
+                    />
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
