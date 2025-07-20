@@ -1,10 +1,10 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, CheckCircle, Clock, Shield } from 'lucide-react';
-import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
+import { supabaseService, CamperSubmission, CamperProfile } from '@/services/supabaseService';
 
 interface AdminCardModalProps {
   isOpen: boolean;
@@ -12,20 +12,94 @@ interface AdminCardModalProps {
   type: 'campers' | 'qualified' | 'pending' | 'submissions';
 }
 
-const AdminCardModal: React.FC<AdminCardModalProps> = ({ isOpen, onClose, type }) => {
-  const [allCampers, setAllCampers] = React.useState(MasterData.getAllCampersWithStatus());
-  const [pendingSubmissions, setPendingSubmissions] = React.useState(MasterData.getPendingSubmissions());
-  const [allSubmissions, setAllSubmissions] = React.useState<CamperSubmission[]>([]);
+interface CamperWithStatus {
+  id: string;
+  name: string;
+  code: string;
+  bunkName: string;
+  bunkId: string;
+  todaySubmission: CamperSubmission | null;
+  workingMissions: string[];
+  status: 'working' | 'submitted' | 'approved' | 'rejected';
+  missionCount: number;
+  isQualified: boolean;
+}
 
-  React.useEffect(() => {
-    const loadData = async () => {
-      const submissions = await MasterData.getAllSubmissions();
+const AdminCardModal: React.FC<AdminCardModalProps> = ({ isOpen, onClose, type }) => {
+  const [allCampers, setAllCampers] = useState<CamperWithStatus[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<CamperSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadAllData();
+    }
+  }, [isOpen]);
+
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      console.log('Loading admin modal data from Supabase...');
+      
+      // Load all necessary data from Supabase
+      const [profiles, submissions, systemSettings] = await Promise.all([
+        supabaseService.getAllCamperProfiles(),
+        supabaseService.getAllSubmissions(),
+        supabaseService.getSystemSettings()
+      ]);
+
+      console.log('Loaded profiles:', profiles.length);
+      console.log('Loaded submissions:', submissions.length);
+
+      // Build campers with status
+      const campersWithStatus = await Promise.all(
+        profiles.map(async (profile) => {
+          const todaySubmission = await supabaseService.getCamperTodaySubmission(profile.id);
+          const workingMissions = await supabaseService.getCamperWorkingMissions(profile.id);
+          
+          let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
+          let missionCount = workingMissions.length;
+          
+          if (todaySubmission) {
+            status = todaySubmission.status === 'edit_requested' ? 'submitted' : todaySubmission.status;
+            missionCount = todaySubmission.missions.length;
+          }
+          
+          return {
+            id: profile.id,
+            name: profile.name,
+            code: profile.code,
+            bunkName: profile.bunkName,
+            bunkId: profile.bunkId,
+            todaySubmission,
+            workingMissions,
+            status,
+            missionCount,
+            isQualified: missionCount >= systemSettings.dailyRequired
+          };
+        })
+      );
+
+      setAllCampers(campersWithStatus);
       setAllSubmissions(submissions);
-    };
-    loadData();
-  }, []);
+      
+    } catch (error) {
+      console.error('Error loading admin modal data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 ml-4">Loading data from Supabase...</p>
+        </div>
+      );
+    }
+
     switch (type) {
       case 'campers':
         return (
@@ -86,33 +160,17 @@ const AdminCardModal: React.FC<AdminCardModalProps> = ({ isOpen, onClose, type }
         );
 
       case 'pending':
+        // With auto-approval, there are no longer pending submissions
+        const pendingSubmissions: CamperSubmission[] = [];
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-purple-600" />
               <h3 className="text-lg font-semibold">Pending Edit Requests ({pendingSubmissions.length})</h3>
             </div>
-            <div className="grid gap-2 max-h-96 overflow-y-auto">
-              {pendingSubmissions.map((submission) => (
-                <Card key={submission.id} className="p-3 bg-purple-50">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium">{submission.camperName}</div>
-                      <Badge className="bg-purple-100 text-purple-800">
-                        {submission.status === 'edit_requested' ? 'Edit Request' : 'Pending'}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Bunk {submission.bunkName} • {submission.missions.length} missions
-                    </div>
-                    {submission.editRequestReason && (
-                      <div className="text-sm text-purple-700 bg-purple-100 p-2 rounded">
-                        Reason: {submission.editRequestReason}
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
+            <div className="text-center py-8 text-gray-500">
+              <p>All submissions are now auto-approved.</p>
+              <p>No pending requests to display.</p>
             </div>
           </div>
         );

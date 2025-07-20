@@ -2,7 +2,8 @@
 import { supabaseService } from '@/services/supabaseService';
 import { SupabaseMigration } from './supabaseMigration';
 
-// Master Data Storage - Now using Supabase with localStorage fallback during migration
+// Master Data Storage - DEPRECATED: Use supabaseService directly instead
+// This file is kept for backward compatibility but should be phased out
 export interface CamperSubmission {
   id: string;
   camperId: string;
@@ -69,14 +70,15 @@ class MasterDataStorage {
     return new Date().toISOString().split('T')[0];
   }
 
-  // Get all camper profiles (now properly async)
+  // DEPRECATED: Use supabaseService.getAllCamperProfiles() instead
   async getAllCamperProfiles(): Promise<CamperProfile[]> {
+    console.warn('MasterData.getAllCamperProfiles() is deprecated - use supabaseService.getAllCamperProfiles() instead');
     try {
       await this.ensureSupabaseReady();
       return await supabaseService.getAllCamperProfiles();
     } catch (error) {
       console.error('Error fetching camper profiles from Supabase:', error);
-      throw error; // Don't use localStorage fallback - force Supabase
+      throw error;
     }
   }
 
@@ -87,32 +89,32 @@ class MasterDataStorage {
     }
   }
 
-  // Synchronous version for immediate backward compatibility (deprecated)
+  // DEPRECATED: Use supabaseService.getAllCamperProfiles() instead
   getAllCamperProfilesSync(): CamperProfile[] {
-    console.warn('getAllCamperProfilesSync is deprecated - use async getAllCamperProfiles instead');
+    console.warn('getAllCamperProfilesSync is DEPRECATED and should not be used - use async supabaseService.getAllCamperProfiles() instead');
     const stored = localStorage.getItem('master_camper_profiles');
     return stored ? JSON.parse(stored) : [];
   }
 
-  // Save camper profiles to Supabase
+  // DEPRECATED: Individual camper operations should be used
   async saveAllCamperProfiles(profiles: CamperProfile[]): Promise<void> {
     console.warn('saveAllCamperProfiles is deprecated - individual camper operations should be used');
-    // This method is now deprecated since profiles should be managed individually
   }
 
-  // Get camper profile by ID (keep sync for now)
+  // DEPRECATED: Use supabaseService.getCamperProfile() instead
   getCamperProfile(camperId: string): CamperProfile | null {
-    // Use sync method for backward compatibility
+    console.warn('MasterData.getCamperProfile() is deprecated - use supabaseService.getCamperProfile() instead');
     return this.getCamperProfileSync(camperId);
   }
 
-  // Synchronous version for backward compatibility
+  // DEPRECATED: Use supabaseService.getCamperProfile() instead
   getCamperProfileSync(camperId: string): CamperProfile | null {
+    console.warn('getCamperProfileSync is DEPRECATED - use async supabaseService.getCamperProfile() instead');
     const profiles = this.getAllCamperProfilesSync();
     return profiles.find(p => p.id === camperId) || null;
   }
 
-  // Generate secure camper code (kept for backward compatibility)
+  // Legacy code generation methods (kept for backward compatibility)
   generateSecureCamperCode(bunkLetter: string, position: number, camperName: string): string {
     const names = camperName.split(' ');
     const firstNameCode = names[0].substring(0, 2).toUpperCase();
@@ -121,15 +123,15 @@ class MasterDataStorage {
     return `${firstNameCode}${lastNameCode}${bunkLetter}${randomNumbers}`;
   }
 
-  // Generate secure staff code (kept for backward compatibility)
   generateSecureStaffCode(bunkLetter: string, position: number, staffName: string): string {
     const initials = staffName.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
     const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `STF_${initials}_${bunkLetter}${position}_${randomSuffix}`;
   }
 
-  // Get all submissions (async version)
+  // DEPRECATED: Use supabaseService.getAllSubmissions() instead
   async getAllSubmissions(): Promise<CamperSubmission[]> {
+    console.warn('MasterData.getAllSubmissions() is deprecated - use supabaseService.getAllSubmissions() instead');
     try {
       await this.ensureSupabaseReady();
       return await supabaseService.getAllSubmissions();
@@ -139,66 +141,31 @@ class MasterDataStorage {
     }
   }
 
-  // Synchronous version for backward compatibility (deprecated)
+  // DEPRECATED: Use supabaseService.getAllSubmissions() instead
   getAllSubmissionsSync(): CamperSubmission[] {
-    console.warn('getAllSubmissionsSync is deprecated - use async getAllSubmissions instead');
+    console.warn('getAllSubmissionsSync is DEPRECATED - use async supabaseService.getAllSubmissions() instead');
     const stored = localStorage.getItem('master_submissions');
     return stored ? JSON.parse(stored) : [];
   }
 
-  // Save all submissions (deprecated - now handled by Supabase)
+  // DEPRECATED: Submissions are managed in Supabase
   saveAllSubmissions(submissions: CamperSubmission[]): void {
     console.warn('saveAllSubmissions is deprecated - submissions are managed in Supabase');
   }
 
-  // Submit missions for a camper (async - auto-approved)
+  // Submit missions for a camper (redirects to supabaseService)
   async submitCamperMissions(camperId: string, missionIds: string[]): Promise<void> {
-    if (this.isSupabaseReady) {
-      try {
-        await supabaseService.submitCamperMissions(camperId, missionIds);
-        return;
-      } catch (error) {
-        console.error('Error submitting missions to Supabase:', error);
-      }
+    try {
+      await supabaseService.submitCamperMissions(camperId, missionIds);
+    } catch (error) {
+      console.error('Error submitting missions:', error);
+      throw error;
     }
-    
-    // Fallback to localStorage approach (auto-approved)
-    const profile = this.getCamperProfileSync(camperId);
-    if (!profile) {
-      console.error('Camper profile not found:', camperId);
-      return;
-    }
-
-    const submissions = this.getAllSubmissionsSync();
-    const today = this.getTodayString();
-    
-    // Remove any existing submission for today
-    const filtered = submissions.filter(s => !(s.camperId === camperId && s.date === today));
-    
-    // Add new submission with auto-approval
-    const newSubmission: CamperSubmission = {
-      id: `sub_${camperId}_${today}_${Date.now()}`,
-      camperId,
-      camperName: profile.name,
-      camperCode: profile.code,
-      bunkName: profile.bunkName,
-      date: today,
-      missions: missionIds,
-      status: 'approved', // Auto-approve all submissions
-      submittedAt: new Date().toISOString(),
-      approvedAt: new Date().toISOString(),
-      approvedBy: 'system'
-    };
-    
-    filtered.push(newSubmission);
-    localStorage.setItem('master_submissions', JSON.stringify(filtered));
-    
-    // Clear working missions after submission
-    this.clearCamperWorkingMissions(camperId);
   }
 
-  // Get today's submission for a camper (async version)
+  // DEPRECATED: Use supabaseService.getCamperTodaySubmission() instead
   async getCamperTodaySubmission(camperId: string): Promise<CamperSubmission | null> {
+    console.warn('MasterData.getCamperTodaySubmission() is deprecated - use supabaseService.getCamperTodaySubmission() instead');
     try {
       await this.ensureSupabaseReady();
       return await supabaseService.getCamperTodaySubmission(camperId);
@@ -208,157 +175,120 @@ class MasterDataStorage {
     }
   }
 
-  // Synchronous version for backward compatibility (deprecated)
+  // DEPRECATED: Use supabaseService.getCamperTodaySubmission() instead
   getCamperTodaySubmissionSync(camperId: string): CamperSubmission | null {
-    console.warn('getCamperTodaySubmissionSync is deprecated - use async getCamperTodaySubmission instead');
+    console.warn('getCamperTodaySubmissionSync is DEPRECATED - use async supabaseService.getCamperTodaySubmission() instead');
     const submissions = this.getAllSubmissionsSync();
     const today = this.getTodayString();
     return submissions.find(s => s.camperId === camperId && s.date === today) || null;
   }
 
-  // Check if camper can edit today's submission (editing disabled for campers)
+  // Editing is disabled for campers
   canEditTodaySubmission(camperId: string): boolean {
     return false; // Camper editing is now disabled
   }
 
-  // Approve submission (async version)
+  // Redirects to supabaseService
   async approveSubmission(submissionId: string, approvedBy: string): Promise<void> {
-    if (this.isSupabaseReady) {
-      try {
-        await supabaseService.approveSubmission(submissionId, approvedBy);
-        return;
-      } catch (error) {
-        console.error('Error approving submission in Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    const submissions = this.getAllSubmissionsSync();
-    const submission = submissions.find(s => s.id === submissionId);
-    
-    if (submission) {
-      submission.status = 'approved';
-      submission.approvedAt = new Date().toISOString();
-      submission.approvedBy = approvedBy;
-      localStorage.setItem('master_submissions', JSON.stringify(submissions));
+    try {
+      await supabaseService.approveSubmission(submissionId, approvedBy);
+    } catch (error) {
+      console.error('Error approving submission:', error);
+      throw error;
     }
   }
 
-  // Reject submission (async version)
+  // Redirects to supabaseService
   async rejectSubmission(submissionId: string, rejectedBy: string): Promise<void> {
-    if (this.isSupabaseReady) {
-      try {
-        await supabaseService.rejectSubmission(submissionId, rejectedBy);
-        return;
-      } catch (error) {
-        console.error('Error rejecting submission in Supabase:', error);
-      }
-    }
-    
-    // Fallback to localStorage
-    const submissions = this.getAllSubmissionsSync();
-    const submission = submissions.find(s => s.id === submissionId);
-    
-    if (submission) {
-      submission.status = 'rejected';
-      submission.rejectedAt = new Date().toISOString();
-      submission.rejectedBy = rejectedBy;
-      localStorage.setItem('master_submissions', JSON.stringify(submissions));
+    try {
+      await supabaseService.rejectSubmission(submissionId, rejectedBy);
+    } catch (error) {
+      console.error('Error rejecting submission:', error);
+      throw error;
     }
   }
 
-  // Get camper's current in-progress missions (keep sync for now)
+  // DEPRECATED: Use supabaseService.getCamperWorkingMissions() instead
   getCamperWorkingMissions(camperId: string): string[] {
-    // Use sync method for backward compatibility
+    console.warn('MasterData.getCamperWorkingMissions() is deprecated - use supabaseService.getCamperWorkingMissions() instead');
     return this.getCamperWorkingMissionsSync(camperId);
   }
 
-  // Synchronous version for backward compatibility
+  // DEPRECATED: Use supabaseService.getCamperWorkingMissions() instead
   getCamperWorkingMissionsSync(camperId: string): string[] {
+    console.warn('getCamperWorkingMissionsSync is DEPRECATED - use async supabaseService.getCamperWorkingMissions() instead');
     const stored = localStorage.getItem(`working_missions_${camperId}`);
     return stored ? JSON.parse(stored) : [];
   }
 
-  // Save camper's working missions (keep sync for now)
+  // DEPRECATED: Use supabaseService.saveCamperWorkingMissions() instead
   saveCamperWorkingMissions(camperId: string, missionIds: string[]): void {
-    // Use sync method for backward compatibility
+    console.warn('MasterData.saveCamperWorkingMissions() is deprecated - use supabaseService.saveCamperWorkingMissions() instead');
     this.saveCamperWorkingMissionsSync(camperId, missionIds);
   }
 
-  // Synchronous version for backward compatibility
+  // DEPRECATED: Use supabaseService.saveCamperWorkingMissions() instead
   saveCamperWorkingMissionsSync(camperId: string, missionIds: string[]): void {
+    console.warn('saveCamperWorkingMissionsSync is DEPRECATED - use async supabaseService.saveCamperWorkingMissions() instead');
     localStorage.setItem(`working_missions_${camperId}`, JSON.stringify(missionIds));
   }
 
-  // Clear working missions after submission (async version)
+  // Redirects to supabaseService
   async clearCamperWorkingMissions(camperId: string): Promise<void> {
-    if (this.isSupabaseReady) {
-      try {
-        await supabaseService.clearCamperWorkingMissions(camperId);
-        return;
-      } catch (error) {
-        console.error('Error clearing working missions from Supabase:', error);
-      }
+    try {
+      await supabaseService.clearCamperWorkingMissions(camperId);
+    } catch (error) {
+      console.error('Error clearing working missions:', error);
+      throw error;
     }
-    
-    // Fallback to localStorage
-    localStorage.removeItem(`working_missions_${camperId}`);
   }
 
-  // Get admin password (keep sync for now)
+  // DEPRECATED: Use supabaseService.getSystemSettings() instead
   getAdminPassword(): string {
-    // Use sync method for backward compatibility
+    console.warn('MasterData.getAdminPassword() is deprecated - use supabaseService.getSystemSettings() instead');
     return this.getAdminPasswordSync();
   }
 
-  // Synchronous version for backward compatibility
+  // DEPRECATED: Use supabaseService.getSystemSettings() instead
   getAdminPasswordSync(): string {
+    console.warn('getAdminPasswordSync is DEPRECATED - use async supabaseService.getSystemSettings() instead');
     return localStorage.getItem('admin_password') || 'admin123';
   }
 
-  // Set admin password (async version)
+  // Redirects to supabaseService
   async setAdminPassword(password: string): Promise<void> {
-    if (this.isSupabaseReady) {
-      try {
-        await supabaseService.updateSystemSettings({ adminPassword: password });
-        return;
-      } catch (error) {
-        console.error('Error updating admin password in Supabase:', error);
-      }
+    try {
+      await supabaseService.updateSystemSettings({ adminPassword: password });
+    } catch (error) {
+      console.error('Error updating admin password:', error);
+      throw error;
     }
-    
-    // Fallback to localStorage
-    localStorage.setItem('admin_password', password);
   }
 
-  // Get daily required missions (keep sync for now)
+  // DEPRECATED: Use supabaseService.getSystemSettings() instead
   getDailyRequired(): number {
-    // Use sync method for backward compatibility
+    console.warn('MasterData.getDailyRequired() is deprecated - use supabaseService.getSystemSettings() instead');
     return this.getDailyRequiredSync();
   }
 
-  // Synchronous version for backward compatibility
+  // DEPRECATED: Use supabaseService.getSystemSettings() instead
   getDailyRequiredSync(): number {
+    console.warn('getDailyRequiredSync is DEPRECATED - use async supabaseService.getSystemSettings() instead');
     const stored = localStorage.getItem('daily_required_missions');
     return stored ? parseInt(stored) : 3;
   }
 
-  // Set daily required missions (async version)
+  // Redirects to supabaseService
   async setDailyRequired(count: number): Promise<void> {
-    if (this.isSupabaseReady) {
-      try {
-        await supabaseService.updateSystemSettings({ dailyRequired: count });
-        return;
-      } catch (error) {
-        console.error('Error updating daily required in Supabase:', error);
-      }
+    try {
+      await supabaseService.updateSystemSettings({ dailyRequired: count });
+    } catch (error) {
+      console.error('Error updating daily required:', error);
+      throw error;
     }
-    
-    // Fallback to localStorage
-    localStorage.setItem('daily_required_missions', count.toString());
   }
 
-  // Get all campers with their submission status for today (keep sync for now)
+  // DEPRECATED: This method should not be used - components should load data directly from supabaseService
   getAllCampersWithStatus(): Array<{
     id: string;
     name: string;
@@ -371,11 +301,11 @@ class MasterDataStorage {
     missionCount: number;
     isQualified: boolean;
   }> {
-    // Use sync methods for backward compatibility
+    console.warn('getAllCampersWithStatus is DEPRECATED - components should load data directly from supabaseService');
     return this.getAllCampersWithStatusSync();
   }
 
-  // Synchronous version for backward compatibility
+  // DEPRECATED: This method should not be used - components should load data directly from supabaseService
   getAllCampersWithStatusSync(): Array<{
     id: string;
     name: string;
@@ -388,6 +318,7 @@ class MasterDataStorage {
     missionCount: number;
     isQualified: boolean;
   }> {
+    console.warn('getAllCampersWithStatusSync is DEPRECATED - components should load data directly from supabaseService');
     const profiles = this.getAllCamperProfilesSync();
     const dailyRequired = this.getDailyRequiredSync();
     
@@ -418,15 +349,15 @@ class MasterDataStorage {
     });
   }
 
-  // Get submissions that need approval (deprecated - all submissions are auto-approved)
+  // DEPRECATED: All submissions are auto-approved
   getPendingSubmissions(): CamperSubmission[] {
-    // With auto-approval, there are no longer pending submissions
+    console.warn('getPendingSubmissions is deprecated - all submissions are auto-approved');
     return [];
   }
 
-  // Synchronous version for backward compatibility (deprecated)
+  // DEPRECATED: All submissions are auto-approved
   getPendingSubmissionsSync(): CamperSubmission[] {
-    // With auto-approval, there are no longer pending submissions
+    console.warn('getPendingSubmissionsSync is deprecated - all submissions are auto-approved');
     return [];
   }
 }
