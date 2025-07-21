@@ -4,27 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, Calendar, Settings, BarChart3, Home, Shield, Target, UserPlus } from 'lucide-react';
+import { LogOut, Users, Calendar, Settings, BarChart3, Home, Shield, Target, UserPlus, Award, Clock } from 'lucide-react';
 import AdminLogin from '@/components/AdminLogin';
 import AdminSubmissionsManagement from '@/components/AdminSubmissionsManagement';
-import HistoricalDataView from '@/components/HistoricalDataView';
 import AdminReportDashboard from '@/components/AdminReportDashboard';
 import AdminAnalytics from '@/components/AdminAnalytics';
 import StaffManagement from '@/components/StaffManagement';
 import BunkManagementDialog from '@/components/BunkManagementDialog';
-import SessionManagement from '@/components/SessionManagement';
+import SessionManagementSupabase from '@/components/SessionManagementSupabase';
 import CamperManagement from '@/components/CamperManagement';
 import MissionManagement from '@/components/MissionManagement';
 import AdminSettings from '@/components/AdminSettings';
 import PublicDashboard from '@/components/PublicDashboard';
 import AdminCardModal from '@/components/AdminCardModal';
 import AdminSupabaseSubmissions from '@/components/AdminSupabaseSubmissions';
-import WeeklyQualificationHistory from '@/components/WeeklyQualificationHistory';
+import SessionQualificationHistory from '@/components/SessionQualificationHistory';
+import DailyNonSubmissionTracking from '@/components/DailyNonSubmissionTracking';
+import RankManagement from '@/components/RankManagement';
 import CsvImportDialog from '@/components/CsvImportDialog';
 import IndividualCamperProgress from '@/pages/IndividualCamperProgress';
 import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrewDate';
 import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
 import { supabaseService } from '@/services/supabaseService';
+import mivtzahLogo from '@/assets/mivtzah-logo.png';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -154,10 +156,13 @@ const AdminDashboard = () => {
               <Home className="h-4 w-4" />
               <span>Home</span>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-sm text-blue-600">{hebrewDate.hebrew}</p>
-              <p className="text-xs text-gray-600">{sessionInfo.hebrew}</p>
+            <div className="flex items-center space-x-4">
+              <img src={mivtzahLogo} alt="Mivtzah Tut Altz Temimim" className="h-12 w-auto" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">מבצע תותי אלץ תמימים</h1>
+                <p className="text-sm text-blue-600">{hebrewDate.hebrew}</p>
+                <p className="text-xs text-gray-600">{sessionInfo.hebrew}</p>
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -247,17 +252,16 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-11">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
-            <TabsTrigger value="submissions">Supabase Submissions</TabsTrigger>
-            <TabsTrigger value="weekly-history">Weekly History</TabsTrigger>
-            <TabsTrigger value="individual">Individual Progress</TabsTrigger>
-            <TabsTrigger value="historical">Historical</TabsTrigger>
+            <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="session-history">Session History</TabsTrigger>
+            <TabsTrigger value="daily-tracking">Daily Tracking</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
+            <TabsTrigger value="ranks">Ranks</TabsTrigger>
             <TabsTrigger value="campers">Edit Campers</TabsTrigger>
             <TabsTrigger value="missions">Edit Missions</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -284,20 +288,20 @@ const AdminDashboard = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="weekly-history">
-            <WeeklyQualificationHistory />
+          <TabsContent value="session-history">
+            <SessionQualificationHistory />
           </TabsContent>
 
-          <TabsContent value="individual">
-            <IndividualCamperProgress />
-          </TabsContent>
-
-          <TabsContent value="historical">
-            <HistoricalDataView />
+          <TabsContent value="daily-tracking">
+            <DailyNonSubmissionTracking />
           </TabsContent>
 
           <TabsContent value="sessions">
-            <SessionManagement />
+            <SessionManagementSupabase />
+          </TabsContent>
+
+          <TabsContent value="ranks">
+            <RankManagement />
           </TabsContent>
 
           <TabsContent value="campers">

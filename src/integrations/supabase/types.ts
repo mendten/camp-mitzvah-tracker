@@ -38,6 +38,44 @@ export type Database = {
         }
         Relationships: []
       }
+      camper_session_stats: {
+        Row: {
+          camper_id: string
+          created_at: string | null
+          id: string
+          session_id: string | null
+          total_missions: number | null
+          total_qualified_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          camper_id: string
+          created_at?: string | null
+          id?: string
+          session_id?: string | null
+          total_missions?: number | null
+          total_qualified_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          camper_id?: string
+          created_at?: string | null
+          id?: string
+          session_id?: string | null
+          total_missions?: number | null
+          total_qualified_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "camper_session_stats_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       camper_weekly_points: {
         Row: {
           camper_id: string
@@ -142,6 +180,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rank_thresholds: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          missions_required: number
+          qualified_days_required: number
+          rank_name: string
+          rank_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          missions_required: number
+          qualified_days_required: number
+          rank_name: string
+          rank_order: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          missions_required?: number
+          qualified_days_required?: number
+          rank_name?: string
+          rank_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       session_config: {
         Row: {
           current_day: number
@@ -165,6 +236,36 @@ export type Database = {
           current_week?: number
           id?: number
           session_lengths?: number[]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          name: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          start_date?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -217,6 +318,7 @@ export type Database = {
           missions: string[]
           rejected_at: string | null
           rejected_by: string | null
+          session_id: string | null
           status: string
           submitted_at: string
           updated_at: string | null
@@ -233,6 +335,7 @@ export type Database = {
           missions: string[]
           rejected_at?: string | null
           rejected_by?: string | null
+          session_id?: string | null
           status: string
           submitted_at: string
           updated_at?: string | null
@@ -249,6 +352,7 @@ export type Database = {
           missions?: string[]
           rejected_at?: string | null
           rejected_by?: string | null
+          session_id?: string | null
           status?: string
           submitted_at?: string
           updated_at?: string | null
@@ -259,6 +363,13 @@ export type Database = {
             columns: ["camper_id"]
             isOneToOne: false
             referencedRelation: "campers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]
