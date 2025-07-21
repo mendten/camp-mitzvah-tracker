@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +26,6 @@ import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrew
 import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
 import { supabaseService } from '@/services/supabaseService';
 import mivtzahLogo from '@/assets/mivtzah-logo.png';
-
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -44,86 +42,70 @@ const AdminDashboard = () => {
   const [allCampersWithStatus, setAllCampersWithStatus] = useState<any[]>([]);
   const [pendingSubmissions, setPendingSubmissions] = useState<CamperSubmission[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        
+
         // Load system settings first
         const settings = await supabaseService.getSystemSettings();
         setAdminPassword(settings.adminPassword);
-        
+
         // Load all data from Supabase
-        const [submissions, camperProfiles] = await Promise.all([
-          supabaseService.getAllSubmissions(),
-          supabaseService.getAllCamperProfiles()
-        ]);
-
+        const [submissions, camperProfiles] = await Promise.all([supabaseService.getAllSubmissions(), supabaseService.getAllCamperProfiles()]);
         setAllSubmissions(submissions);
-        
-        // Build campers with status using async data
-        const campersWithStatus = await Promise.all(
-          camperProfiles.map(async (profile) => {
-            const todaySubmission = await supabaseService.getCamperTodaySubmission(profile.id);
-            const dailyRequired = settings.dailyRequired;
-            
-            let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
-            let missionCount = 0;
-            
-            if (todaySubmission) {
-              // With auto-approval, all submissions are approved
-              status = 'approved';
-              missionCount = todaySubmission.missions.length;
-            }
-            
-            return {
-              id: profile.id,
-              name: profile.name,
-              code: profile.code,
-              bunkName: profile.bunkName,
-              bunkId: profile.bunkId,
-              todaySubmission,
-              status,
-              missionCount,
-              isQualified: missionCount >= dailyRequired
-            };
-          })
-        );
 
+        // Build campers with status using async data
+        const campersWithStatus = await Promise.all(camperProfiles.map(async profile => {
+          const todaySubmission = await supabaseService.getCamperTodaySubmission(profile.id);
+          const dailyRequired = settings.dailyRequired;
+          let status: 'working' | 'submitted' | 'approved' | 'rejected' = 'working';
+          let missionCount = 0;
+          if (todaySubmission) {
+            // With auto-approval, all submissions are approved
+            status = 'approved';
+            missionCount = todaySubmission.missions.length;
+          }
+          return {
+            id: profile.id,
+            name: profile.name,
+            code: profile.code,
+            bunkName: profile.bunkName,
+            bunkId: profile.bunkId,
+            todaySubmission,
+            status,
+            missionCount,
+            isQualified: missionCount >= dailyRequired
+          };
+        }));
         setAllCampersWithStatus(campersWithStatus);
-        
+
         // Filter pending submissions (none with auto-approval)
         const pending: CamperSubmission[] = [];
         setPendingSubmissions(pending);
-        
       } catch (error) {
         console.error('Error loading admin dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
-
     const isAdminLoggedIn = localStorage.getItem('adminAuthenticated');
     if (isAdminLoggedIn === 'true') {
       setIsAuthenticated(true);
       loadData();
     }
   }, []);
-
   const handleLogin = () => {
     setIsAuthenticated(true);
     localStorage.setItem('adminAuthenticated', 'true');
     // Reload data after login
     window.location.reload();
   };
-
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('adminAuthenticated');
     navigate('/');
   };
-
   const handleBackToHome = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('adminAuthenticated');
@@ -137,29 +119,22 @@ const AdminDashboard = () => {
   const handleCardClick = (action: 'campers' | 'qualified' | 'pending' | 'submissions') => {
     setModalType(action);
   };
-
   if (!isAuthenticated) {
     return <AdminLogin onLogin={handleLogin} onBack={handleBackToHome} />;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-green-100">
+  return <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-green-100">
       <header className="bg-white shadow-sm border-b p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/')}
-              className="flex items-center space-x-2"
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate('/')} className="flex items-center space-x-2">
               <Home className="h-4 w-4" />
               <span>Home</span>
             </Button>
             <div className="flex items-center space-x-4">
               <img src={mivtzahLogo} alt="Mivtzah Tut Altz Temimim" className="h-12 w-auto" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">מבצע תותי אלץ תמימים</h1>
+                <h1 className="text-2xl font-bold text-gray-900">גן ישראל פלורידא 
+מבצע טוט אלץ</h1>
                 <p className="text-sm text-blue-600">{hebrewDate.hebrew}</p>
                 <p className="text-xs text-gray-600">{sessionInfo.hebrew}</p>
               </div>
@@ -170,12 +145,7 @@ const AdminDashboard = () => {
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-sm text-gray-600">Online</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="flex items-center space-x-2"
-            >
+            <Button variant="outline" size="sm" onClick={handleLogout} className="flex items-center space-x-2">
               <LogOut className="h-4 w-4" />
               <span>Logout</span>
             </Button>
@@ -185,10 +155,8 @@ const AdminDashboard = () => {
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Quick Stats Overview - Clickable Cards with Modals */}
-        {loading ? (
-          <div className="grid md:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => (
-              <Card key={i} className="bg-white/80 backdrop-blur shadow-lg border-0">
+        {loading ? <div className="grid md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <Card key={i} className="bg-white/80 backdrop-blur shadow-lg border-0">
                 <CardContent className="p-6 text-center">
                   <div className="animate-pulse">
                     <div className="h-12 w-12 bg-gray-300 rounded mx-auto mb-2"></div>
@@ -196,15 +164,9 @@ const AdminDashboard = () => {
                     <div className="h-4 bg-gray-300 rounded"></div>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-4 gap-4">
-            <Card 
-              className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
-              onClick={() => handleCardClick('campers')}
-            >
+              </Card>)}
+          </div> : <div className="grid md:grid-cols-4 gap-4">
+            <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105" onClick={() => handleCardClick('campers')}>
               <CardContent className="p-6 text-center">
                 <Users className="h-12 w-12 mx-auto text-blue-600 mb-2" />
                 <div className="text-3xl font-bold text-gray-900">{allCampersWithStatus.length}</div>
@@ -213,10 +175,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           
-          <Card 
-            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
-            onClick={() => handleCardClick('qualified')}
-          >
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105" onClick={() => handleCardClick('qualified')}>
             <CardContent className="p-6 text-center">
               <Calendar className="h-12 w-12 mx-auto text-green-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">{qualifiedToday}</div>
@@ -225,10 +184,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
           
-          <Card 
-            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
-            onClick={() => handleCardClick('pending')}
-          >
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105" onClick={() => handleCardClick('pending')}>
             <CardContent className="p-6 text-center">
               <BarChart3 className="h-12 w-12 mx-auto text-purple-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">0</div>
@@ -237,10 +193,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
           
-          <Card 
-            className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105"
-            onClick={() => handleCardClick('submissions')}
-          >
+          <Card className="bg-white/80 backdrop-blur shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow hover:scale-105" onClick={() => handleCardClick('submissions')}>
             <CardContent className="p-6 text-center">
               <Shield className="h-12 w-12 mx-auto text-orange-600 mb-2" />
               <div className="text-3xl font-bold text-gray-900">{totalSubmissions}</div>
@@ -248,8 +201,7 @@ const AdminDashboard = () => {
               <p className="text-xs text-orange-600 mt-1">Click to view history</p>
             </CardContent>
           </Card>
-          </div>
-        )}
+          </div>}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-10">
@@ -277,10 +229,7 @@ const AdminDashboard = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">Supabase Submissions</h2>
-                <Button 
-                  onClick={() => setShowCsvImport(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
+                <Button onClick={() => setShowCsvImport(true)} className="bg-blue-600 hover:bg-blue-700">
                   Import CSV
                 </Button>
               </div>
@@ -338,28 +287,14 @@ const AdminDashboard = () => {
         </Tabs>
       </main>
 
-      <BunkManagementDialog
-        isOpen={showBunkManagement}
-        onClose={() => setShowBunkManagement(false)}
-        bunk={null}
-      />
+      <BunkManagementDialog isOpen={showBunkManagement} onClose={() => setShowBunkManagement(false)} bunk={null} />
 
-      <AdminCardModal
-        isOpen={modalType !== null}
-        onClose={() => setModalType(null)}
-        type={modalType || 'campers'}
-      />
+      <AdminCardModal isOpen={modalType !== null} onClose={() => setModalType(null)} type={modalType || 'campers'} />
 
-      <CsvImportDialog
-        isOpen={showCsvImport}
-        onClose={() => setShowCsvImport(false)}
-        onImportComplete={() => {
-          // Refresh data after import
-          window.location.reload();
-        }}
-      />
-    </div>
-  );
+      <CsvImportDialog isOpen={showCsvImport} onClose={() => setShowCsvImport(false)} onImportComplete={() => {
+      // Refresh data after import
+      window.location.reload();
+    }} />
+    </div>;
 };
-
 export default AdminDashboard;
