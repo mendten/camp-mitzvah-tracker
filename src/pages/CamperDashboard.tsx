@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, Trophy, Clock, Send, History } from 'lucide-react';
-import CamperHistoryView from '@/components/CamperHistoryView';
+import EnhancedCamperHistory from '@/components/EnhancedCamperHistory';
 import { useToast } from '@/hooks/use-toast';
 import MissionCard from '@/components/MissionCard';
 import { getCurrentHebrewDate, getSessionInfo } from '@/utils/hebrewDate';
@@ -23,6 +23,22 @@ const CamperDashboard = () => {
   const [dailyRequired, setDailyRequired] = useState(3);
   const hebrewDate = getCurrentHebrewDate();
   const sessionInfo = getSessionInfo();
+  
+  // Get current date info for display
+  const currentDate = new Date();
+  const dateDisplayInfo = {
+    dayName: currentDate.toLocaleDateString('en-US', { weekday: 'long' }),
+    fullDate: currentDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }),
+    shortDate: currentDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    })
+  };
 
   useEffect(() => {
     loadCamperData();
@@ -359,15 +375,20 @@ const CamperDashboard = () => {
           </Card>
         </div>
 
-        {/* Mission History - always show */}
-        <CamperHistoryView camperId={selectedCamper.id} />
+        {/* Mission History - always show with qualification bar for campers */}
+        <EnhancedCamperHistory camperId={selectedCamper.id} showQualificationBar={true} />
 
         {/* Missions Card - only show if not submitted */}
         {submissionStatus === 'none' && (
           <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
             <CardHeader>
               <CardTitle className="text-xl flex items-center justify-between">
-                <span>Today's Missions</span>
+                <div>
+                  <span>Today's Missions</span>
+                  <div className="text-sm font-normal text-gray-600 mt-1">
+                    {dateDisplayInfo.fullDate} - Submit by 4:00 PM tomorrow
+                  </div>
+                </div>
                 <div className="flex space-x-2">
                   {canSubmit && (
                     <Button

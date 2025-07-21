@@ -21,6 +21,7 @@ import SessionQualificationHistory from '@/components/SessionQualificationHistor
 import DailyNonSubmissionTracking from '@/components/DailyNonSubmissionTracking';
 import RankManagement from '@/components/RankManagement';
 import CsvImportDialog from '@/components/CsvImportDialog';
+import AdminEditingEnhancements from '@/components/AdminEditingEnhancements';
 import IndividualCamperProgress from '@/pages/IndividualCamperProgress';
 import { getCurrentProperHebrewDate, getSessionInfo } from '@/utils/properHebrewDate';
 import { MasterData, CamperSubmission } from '@/utils/masterDataStorage';
@@ -204,10 +205,11 @@ const AdminDashboard = () => {
           </div>}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-10">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="public">Public View</TabsTrigger>
             <TabsTrigger value="reports">All Campers</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="stats">Statistics</TabsTrigger>
             <TabsTrigger value="session-history">Session History</TabsTrigger>
             <TabsTrigger value="daily-tracking">Daily Tracking</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
@@ -235,6 +237,10 @@ const AdminDashboard = () => {
               </div>
               <AdminSupabaseSubmissions />
             </div>
+          </TabsContent>
+
+          <TabsContent value="stats">
+            <AdminEditingEnhancements />
           </TabsContent>
 
           <TabsContent value="session-history">

@@ -286,3 +286,20 @@ export async function importData(jsonData: string): Promise<boolean> {
     return false;
   }
 }
+
+export const exportCamperData = () => {
+  const csvContent = [
+    ['Name', 'Bunk', 'Total Missions', 'Qualified Days', 'Current Streak', 'Total Submissions'],
+    // Placeholder data - would be replaced with actual stats
+    ['Sample Camper', 'Alef', '25', '15', '5', '20']
+  ];
+
+  const csvString = csvContent.map(row => row.join(',')).join('\n');
+  const blob = new Blob([csvString], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `camper-stats-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+};

@@ -137,27 +137,33 @@ const DailyNonSubmissionTracking = () => {
   const getTimeStatus = () => {
     const now = new Date();
     const hour = now.getHours();
-    const isWeekday = now.getDay() >= 1 && now.getDay() <= 4; // Monday to Thursday
-    const isFriday = now.getDay() === 5;
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
-    if (isWeekday) {
-      if (hour >= 23) {
-        return { status: 'deadline', message: 'Deadline passed (11:00 PM)' };
-      } else if (hour >= 21) {
-        return { status: 'approaching', message: 'Deadline approaching (11:00 PM)' };
+    // Logic: Submit missions for the PREVIOUS day by 4:00 PM
+    // So Monday 4 PM is deadline for Sunday's missions, Tuesday 4 PM for Monday's missions, etc.
+    
+    if (currentDay >= 1 && currentDay <= 5) { // Monday to Friday
+      if (hour >= 16) { // After 4:00 PM
+        return { 
+          status: 'deadline', 
+          message: `Deadline passed (4:00 PM) - Yesterday's missions no longer accepted` 
+        };
+      } else if (hour >= 14) { // After 2:00 PM
+        return { 
+          status: 'approaching', 
+          message: `Deadline approaching (4:00 PM today) for yesterday's missions` 
+        };
       } else {
-        return { status: 'open', message: 'Submissions open until 11:00 PM' };
-      }
-    } else if (isFriday) {
-      if (hour >= 19) {
-        return { status: 'deadline', message: 'Deadline passed (7:00 PM Friday)' };
-      } else if (hour >= 17) {
-        return { status: 'approaching', message: 'Deadline approaching (7:00 PM Friday)' };
-      } else {
-        return { status: 'open', message: 'Submissions open until 7:00 PM Friday' };
+        return { 
+          status: 'open', 
+          message: `Submissions open until 4:00 PM today for yesterday's missions` 
+        };
       }
     } else {
-      return { status: 'closed', message: 'Weekend - No submissions required' };
+      return { 
+        status: 'closed', 
+        message: 'Weekend - Submit Sunday missions by Monday 4 PM' 
+      };
     }
   };
 
@@ -201,6 +207,9 @@ const DailyNonSubmissionTracking = () => {
             <div className="flex items-center space-x-2">
               <Clock className="h-6 w-6 text-blue-600" />
               <span>Daily Submission Tracking</span>
+              <Badge variant="outline" className="ml-2">
+                Submit by 4:00 PM next day
+              </Badge>
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-600">
