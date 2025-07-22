@@ -44,6 +44,22 @@ const AdminEditingEnhancements = () => {
 
       if (campersError) throw campersError;
 
+      // Get current session
+      const { data: sessionConfig, error: sessionError } = await supabase
+        .from('session_config')
+        .select('current_session')
+        .limit(1)
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Get existing manual stats from camper_session_stats
+      const { data: manualStats, error: manualStatsError } = await supabase
+        .from('camper_session_stats')
+        .select('*');
+
+      if (manualStatsError) throw manualStatsError;
+
       // Get all submissions to calculate stats
       const { data: allSubmissions, error: submissionsError } = await supabase
         .from('submissions')
@@ -65,12 +81,23 @@ const AdminEditingEnhancements = () => {
         const camperSubmissions = allSubmissions?.filter(s => s.camper_id === camper.id) || [];
         
         const totalSubmissions = camperSubmissions.length;
-        const totalMissions = camperSubmissions.reduce((sum, s) => sum + s.missions.length, 0);
-        const qualifiedDays = camperSubmissions.filter(s => 
+        
+        // Check if we have manual stats for this camper
+        const manualStat = manualStats?.find(stat => 
+          stat.camper_id === camper.id && 
+          (!stat.session_id || stat.session_id === sessionConfig.current_session.toString())
+        );
+        
+        // Use manual values if they exist, otherwise calculate from submissions
+        const calculatedTotalMissions = camperSubmissions.reduce((sum, s) => sum + s.missions.length, 0);
+        const calculatedQualifiedDays = camperSubmissions.filter(s => 
           s.missions.length >= settings.daily_required_missions
         ).length;
         
-        // Calculate current streak
+        const totalMissions = manualStat?.total_missions ?? calculatedTotalMissions;
+        const qualifiedDays = manualStat?.total_qualified_days ?? calculatedQualifiedDays;
+        
+        // Calculate current streak (always from submissions)
         const sortedSubmissions = [...camperSubmissions].sort((a, b) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
@@ -125,13 +152,58 @@ const AdminEditingEnhancements = () => {
 
   const saveEdits = async (camperId: string) => {
     try {
-      // Note: In a real implementation, you'd need to create a separate table
-      // for manual adjustments or modify the existing submission data
-      // For now, we'll just show a message about the functionality
-      
+      // Get current session
+      const { data: sessionConfig, error: sessionError } = await supabase
+        .from('session_config')
+        .select('current_session')
+        .limit(1)
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Check if a record already exists for this camper
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('camper_session_stats')
+        .select('id')
+        .eq('camper_id', camperId)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      const updateData = {
+        camper_id: camperId,
+        total_missions: editValues.totalMissions,
+        total_qualified_days: editValues.qualifiedDays,
+        session_id: sessionConfig.current_session.toString()
+      };
+
+      if (existingRecord) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('camper_session_stats')
+          .update(updateData)
+          .eq('id', existingRecord.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('camper_session_stats')
+          .insert(updateData);
+
+        if (insertError) throw insertError;
+      }
+
+      // Update local state
+      setCamperStats(prev => prev.map(camper => 
+        camper.id === camperId 
+          ? { ...camper, totalMissions: editValues.totalMissions, qualifiedDays: editValues.qualifiedDays }
+          : camper
+      ));
+
       toast({
-        title: "Edit Functionality",
-        description: "Direct editing would require additional database structure. Consider implementing manual adjustment records.",
+        title: "Success",
+        description: "Camper statistics updated successfully",
         variant: "default"
       });
       
