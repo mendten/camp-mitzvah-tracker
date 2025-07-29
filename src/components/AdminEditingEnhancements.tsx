@@ -16,12 +16,13 @@ interface CamperStats {
   qualifiedDays: number;
   currentStreak: number;
   totalSubmissions: number;
+  totalPoints: number;
 }
 
 const AdminEditingEnhancements = () => {
   const [camperStats, setCamperStats] = useState<CamperStats[]>([]);
   const [editingCamper, setEditingCamper] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<{ totalMissions: number; qualifiedDays: number }>({ totalMissions: 0, qualifiedDays: 0 });
+  const [editValues, setEditValues] = useState<{ totalMissions: number; qualifiedDays: number; totalPoints: number }>({ totalMissions: 0, qualifiedDays: 0, totalPoints: 0 });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -76,6 +77,14 @@ const AdminEditingEnhancements = () => {
 
       if (settingsError) throw settingsError;
 
+      // Get weekly points for current session
+      const { data: weeklyPoints, error: pointsError } = await supabase
+        .from('camper_weekly_points')
+        .select('*')
+        .eq('session_number', sessionConfig.current_session);
+
+      if (pointsError) throw pointsError;
+
       // Calculate stats for each camper
       const statsData: CamperStats[] = camperProfiles.map(camper => {
         const camperSubmissions = allSubmissions?.filter(s => s.camper_id === camper.id) || [];
@@ -96,6 +105,10 @@ const AdminEditingEnhancements = () => {
         
         const totalMissions = manualStat?.total_missions ?? calculatedTotalMissions;
         const qualifiedDays = manualStat?.total_qualified_days ?? calculatedQualifiedDays;
+        
+        // Calculate total points from weekly points table
+        const camperPoints = weeklyPoints?.filter(p => p.camper_id === camper.id) || [];
+        const totalPoints = camperPoints.reduce((sum, p) => sum + (p.total_points || 0), 0);
         
         // Calculate current streak (always from submissions)
         const sortedSubmissions = [...camperSubmissions].sort((a, b) => 
@@ -118,7 +131,8 @@ const AdminEditingEnhancements = () => {
           totalMissions,
           qualifiedDays,
           currentStreak,
-          totalSubmissions
+          totalSubmissions,
+          totalPoints
         };
       });
 
@@ -141,13 +155,14 @@ const AdminEditingEnhancements = () => {
     setEditingCamper(camper.id);
     setEditValues({
       totalMissions: camper.totalMissions,
-      qualifiedDays: camper.qualifiedDays
+      qualifiedDays: camper.qualifiedDays,
+      totalPoints: camper.totalPoints
     });
   };
 
   const cancelEditing = () => {
     setEditingCamper(null);
-    setEditValues({ totalMissions: 0, qualifiedDays: 0 });
+    setEditValues({ totalMissions: 0, qualifiedDays: 0, totalPoints: 0 });
   };
 
   const saveEdits = async (camperId: string) => {
@@ -194,10 +209,53 @@ const AdminEditingEnhancements = () => {
         if (insertError) throw insertError;
       }
 
+      // Save points to weekly points table for current session and week
+      const { data: sessionData, error: sessionCheckError } = await supabase
+        .from('session_config')
+        .select('current_session, current_week')
+        .limit(1)
+        .single();
+
+      if (sessionCheckError) throw sessionCheckError;
+
+      // Update or insert weekly points
+      const { data: existingPoints, error: pointsCheckError } = await supabase
+        .from('camper_weekly_points')
+        .select('id')
+        .eq('camper_id', camperId)
+        .eq('session_number', sessionData.current_session)
+        .eq('week_number', sessionData.current_week)
+        .maybeSingle();
+
+      if (pointsCheckError) throw pointsCheckError;
+
+      const pointsData = {
+        camper_id: camperId,
+        session_number: sessionData.current_session,
+        week_number: sessionData.current_week,
+        total_points: editValues.totalPoints,
+        missions_completed: editValues.totalMissions
+      };
+
+      if (existingPoints) {
+        const { error: updatePointsError } = await supabase
+          .from('camper_weekly_points')
+          .update(pointsData)
+          .eq('id', existingPoints.id);
+
+        if (updatePointsError) throw updatePointsError;
+      } else {
+        const { error: insertPointsError } = await supabase
+          .from('camper_weekly_points')
+          .insert(pointsData);
+
+        if (insertPointsError) throw insertPointsError;
+      }
+
       // Update local state
       setCamperStats(prev => prev.map(camper => 
         camper.id === camperId 
-          ? { ...camper, totalMissions: editValues.totalMissions, qualifiedDays: editValues.qualifiedDays }
+          ? { ...camper, totalMissions: editValues.totalMissions, qualifiedDays: editValues.qualifiedDays, totalPoints: editValues.totalPoints }
           : camper
       ));
 
@@ -281,6 +339,7 @@ const AdminEditingEnhancements = () => {
                   <th className="text-left p-4 font-semibold">Bunk</th>
                   <th className="text-center p-4 font-semibold">Total Missions</th>
                   <th className="text-center p-4 font-semibold">Qualified Days</th>
+                  <th className="text-center p-4 font-semibold">Total Points</th>
                   <th className="text-center p-4 font-semibold">Current Streak</th>
                   <th className="text-center p-4 font-semibold">Total Submissions</th>
                   <th className="text-center p-4 font-semibold">Actions</th>
@@ -320,6 +379,18 @@ const AdminEditingEnhancements = () => {
                         />
                       ) : (
                         <span className="text-lg font-bold text-green-600">{camper.qualifiedDays}</span>
+                      )}
+                    </td>
+                    <td className="p-4 text-center">
+                      {editingCamper === camper.id ? (
+                        <Input
+                          type="number"
+                          value={editValues.totalPoints}
+                          onChange={(e) => setEditValues(prev => ({ ...prev, totalPoints: parseInt(e.target.value) || 0 }))}
+                          className="w-20 text-center"
+                        />
+                      ) : (
+                        <span className="text-lg font-bold text-orange-600">{camper.totalPoints}</span>
                       )}
                     </td>
                     <td className="p-4 text-center">

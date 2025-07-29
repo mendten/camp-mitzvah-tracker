@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +8,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Plus, Edit2, Trash2, Search } from 'lucide-react';
-import { MasterData, CamperProfile } from '@/utils/masterDataStorage';
-import { CAMP_DATA } from '@/data/campData';
+import { supabase } from '@/integrations/supabase/client';
+
+interface CamperProfile {
+  id: string;
+  name: string;
+  access_code: string;
+  bunk_id: string;
+  bunkName?: string;
+}
 
 const CamperManagement = () => {
   const { toast } = useToast();
@@ -22,30 +28,55 @@ const CamperManagement = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedCamper, setSelectedCamper] = useState<CamperProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bunks, setBunks] = useState<Array<{id: string; name: string}>>([]);
   const [newCamper, setNewCamper] = useState({
     name: '',
-    bunkId: '',
-    code: ''
+    bunk_id: '',
+    access_code: ''
   });
 
   useEffect(() => {
-    loadCampers();
+    loadData();
   }, []);
 
   useEffect(() => {
     filterCampers();
   }, [campers, searchTerm, bunkFilter]);
 
-  const loadCampers = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const allCampers = await MasterData.getAllCamperProfiles();
-      setCampers(allCampers);
+      // Load bunks
+      const { data: bunksData, error: bunksError } = await supabase
+        .from('bunks')
+        .select('id, display_name');
+      
+      if (bunksError) throw bunksError;
+      
+      const bunksList = bunksData?.map(bunk => ({
+        id: bunk.id,
+        name: bunk.display_name
+      })) || [];
+      setBunks(bunksList);
+
+      // Load campers
+      const { data: campersData, error: campersError } = await supabase
+        .from('campers')
+        .select('id, name, access_code, bunk_id');
+      
+      if (campersError) throw campersError;
+      
+      const campersWithBunks = campersData?.map(camper => ({
+        ...camper,
+        bunkName: bunksList.find(b => b.id === camper.bunk_id)?.name || 'Unknown'
+      })) || [];
+      
+      setCampers(campersWithBunks);
     } catch (error) {
-      console.error('Error loading campers:', error);
+      console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "Failed to load campers",
+        description: "Failed to load data",
         variant: "destructive"
       });
     } finally {
@@ -59,19 +90,26 @@ const CamperManagement = () => {
     if (searchTerm) {
       filtered = filtered.filter(camper => 
         camper.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        camper.code.toLowerCase().includes(searchTerm.toLowerCase())
+        camper.access_code.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (bunkFilter !== 'all') {
-      filtered = filtered.filter(camper => camper.bunkId === bunkFilter);
+      filtered = filtered.filter(camper => camper.bunk_id === bunkFilter);
     }
 
     setFilteredCampers(filtered);
   };
 
-  const handleAddCamper = () => {
-    if (!newCamper.name || !newCamper.bunkId) {
+  const generateAccessCode = (name: string, bunkId: string) => {
+    const initials = name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
+    const bunkLetter = bunkId.split('-').pop()?.toUpperCase() || 'A';
+    const randomNum = Math.floor(Math.random() * 900) + 100;
+    return `${initials}-${bunkLetter.charAt(0)}-${randomNum}`;
+  };
+
+  const handleAddCamper = async () => {
+    if (!newCamper.name || !newCamper.bunk_id) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -80,39 +118,43 @@ const CamperManagement = () => {
       return;
     }
 
-    const bunk = CAMP_DATA.find(b => b.id === newCamper.bunkId);
-    if (!bunk) {
+    try {
+      const accessCode = newCamper.access_code || generateAccessCode(newCamper.name, newCamper.bunk_id);
+      const camperId = newCamper.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+
+      const { error } = await supabase
+        .from('campers')
+        .insert({
+          id: camperId,
+          name: newCamper.name,
+          access_code: accessCode,
+          bunk_id: newCamper.bunk_id
+        });
+
+      if (error) throw error;
+
+      await loadData(); // Reload to get updated data
+      
+      setNewCamper({ name: '', bunk_id: '', access_code: '' });
+      setShowAddDialog(false);
+      
+      const bunkName = bunks.find(b => b.id === newCamper.bunk_id)?.name;
       toast({
-        title: "Invalid Bunk",
-        description: "Selected bunk does not exist.",
+        title: "Camper Added",
+        description: `${newCamper.name} has been added to ${bunkName}.`,
+      });
+    } catch (error) {
+      console.error('Error adding camper:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add camper",
         variant: "destructive"
       });
-      return;
     }
-
-    const camperProfile: CamperProfile = {
-      id: `camper_${Date.now()}`,
-      name: newCamper.name,
-      code: newCamper.code || MasterData.generateSecureCamperCode(bunk.displayName.split(' ').pop()?.charAt(0).toUpperCase() || 'A', Math.floor(Math.random() * 100), newCamper.name),
-      bunkId: newCamper.bunkId,
-      bunkName: bunk.displayName
-    };
-
-    const updatedCampers = [...campers, camperProfile];
-    MasterData.saveAllCamperProfiles(updatedCampers);
-    setCampers(updatedCampers);
-    
-    setNewCamper({ name: '', bunkId: '', code: '' });
-    setShowAddDialog(false);
-    
-    toast({
-      title: "Camper Added",
-      description: `${camperProfile.name} has been added to Bunk ${bunk.displayName}.`,
-    });
   };
 
-  const handleEditCamper = () => {
-    if (!selectedCamper || !selectedCamper.name || !selectedCamper.bunkId) {
+  const handleEditCamper = async () => {
+    if (!selectedCamper || !selectedCamper.name || !selectedCamper.bunk_id) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -121,52 +163,81 @@ const CamperManagement = () => {
       return;
     }
 
-    const bunk = CAMP_DATA.find(b => b.id === selectedCamper.bunkId);
-    if (!bunk) {
+    try {
+      const { error } = await supabase
+        .from('campers')
+        .update({
+          name: selectedCamper.name,
+          access_code: selectedCamper.access_code,
+          bunk_id: selectedCamper.bunk_id
+        })
+        .eq('id', selectedCamper.id);
+
+      if (error) throw error;
+
+      await loadData(); // Reload to get updated data
+      
+      setSelectedCamper(null);
+      setShowEditDialog(false);
+      
       toast({
-        title: "Invalid Bunk",
-        description: "Selected bunk does not exist.",
+        title: "Camper Updated",
+        description: `${selectedCamper.name}'s information has been updated.`,
+      });
+    } catch (error) {
+      console.error('Error updating camper:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update camper",
         variant: "destructive"
       });
-      return;
     }
-
-    const updatedCamper = {
-      ...selectedCamper,
-      bunkName: bunk.displayName
-    };
-
-    const updatedCampers = campers.map(c => 
-      c.id === selectedCamper.id ? updatedCamper : c
-    );
-    
-    MasterData.saveAllCamperProfiles(updatedCampers);
-    setCampers(updatedCampers);
-    
-    setSelectedCamper(null);
-    setShowEditDialog(false);
-    
-    toast({
-      title: "Camper Updated",
-      description: `${updatedCamper.name}'s information has been updated.`,
-    });
   };
 
-  const handleDeleteCamper = (camperId: string) => {
+  const handleDeleteCamper = async (camperId: string) => {
     const camper = campers.find(c => c.id === camperId);
     if (!camper) return;
 
-    const updatedCampers = campers.filter(c => c.id !== camperId);
-    MasterData.saveAllCamperProfiles(updatedCampers);
-    setCampers(updatedCampers);
-    
-    toast({
-      title: "Camper Removed",
-      description: `${camper.name} has been removed from the system.`,
-    });
+    try {
+      const { error } = await supabase
+        .from('campers')
+        .delete()
+        .eq('id', camperId);
+
+      if (error) throw error;
+
+      await loadData(); // Reload to get updated data
+      
+      toast({
+        title: "Camper Removed",
+        description: `${camper.name} has been removed from the system.`,
+      });
+    } catch (error) {
+      console.error('Error deleting camper:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete camper",
+        variant: "destructive"
+      });
+    }
   };
 
-  const uniqueBunks = CAMP_DATA.map(bunk => ({ id: bunk.id, name: bunk.displayName }));
+  if (loading) {
+    return (
+      <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
+        <CardContent className="p-6 text-center">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-300 rounded mb-4"></div>
+            <div className="space-y-3">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="h-16 bg-gray-300 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-white/80 backdrop-blur shadow-lg border-0">
@@ -199,23 +270,23 @@ const CamperManagement = () => {
                 </div>
                 <div>
                   <Label htmlFor="bunk">Bunk</Label>
-                  <Select value={newCamper.bunkId} onValueChange={(value) => setNewCamper(prev => ({ ...prev, bunkId: value }))}>
+                  <Select value={newCamper.bunk_id} onValueChange={(value) => setNewCamper(prev => ({ ...prev, bunk_id: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select bunk" />
                     </SelectTrigger>
                     <SelectContent>
-                      {uniqueBunks.map(bunk => (
+                      {bunks.map(bunk => (
                         <SelectItem key={bunk.id} value={bunk.id}>{bunk.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="code">Camper Code (Optional)</Label>
+                  <Label htmlFor="code">Access Code (Optional)</Label>
                   <Input
                     id="code"
-                    value={newCamper.code}
-                    onChange={(e) => setNewCamper(prev => ({ ...prev, code: e.target.value }))}
+                    value={newCamper.access_code}
+                    onChange={(e) => setNewCamper(prev => ({ ...prev, access_code: e.target.value }))}
                     placeholder="Auto-generated if empty"
                   />
                 </div>
@@ -250,7 +321,7 @@ const CamperManagement = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Bunks</SelectItem>
-              {uniqueBunks.map(bunk => (
+              {bunks.map(bunk => (
                 <SelectItem key={bunk.id} value={bunk.id}>{bunk.name}</SelectItem>
               ))}
             </SelectContent>
@@ -267,7 +338,7 @@ const CamperManagement = () => {
               <div className="flex items-center space-x-4">
                 <div>
                   <h3 className="font-medium">{camper.name}</h3>
-                  <p className="text-sm text-gray-500">Code: {camper.code}</p>
+                  <p className="text-sm text-gray-500">Code: {camper.access_code}</p>
                 </div>
                 <Badge variant="outline">{camper.bunkName}</Badge>
               </div>
@@ -318,21 +389,21 @@ const CamperManagement = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-code">Camper Code</Label>
+                <Label htmlFor="edit-code">Access Code</Label>
                 <Input
                   id="edit-code"
-                  value={selectedCamper.code}
-                  onChange={(e) => setSelectedCamper(prev => prev ? { ...prev, code: e.target.value } : null)}
+                  value={selectedCamper.access_code}
+                  onChange={(e) => setSelectedCamper(prev => prev ? { ...prev, access_code: e.target.value } : null)}
                 />
               </div>
               <div>
                 <Label htmlFor="edit-bunk">Bunk</Label>
-                <Select value={selectedCamper.bunkId} onValueChange={(value) => setSelectedCamper(prev => prev ? { ...prev, bunkId: value } : null)}>
+                <Select value={selectedCamper.bunk_id} onValueChange={(value) => setSelectedCamper(prev => prev ? { ...prev, bunk_id: value } : null)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {uniqueBunks.map(bunk => (
+                    {bunks.map(bunk => (
                       <SelectItem key={bunk.id} value={bunk.id}>{bunk.name}</SelectItem>
                     ))}
                   </SelectContent>
